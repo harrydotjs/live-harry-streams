@@ -1,9 +1,9 @@
-name: World Clash Fight – Daily 10hr Stream
+name: World Clash Fight – Daily 10hr Ultra-HD Stream
 
 on:
-  workflow_dispatch:   # keep for manual test runs
+  workflow_dispatch:   # manual run anytime
   schedule:
-    # 2 segments × 5 hours = 10 hours/day  (IST = UTC+5:30)
+    # 2 segments × 5 hours = 10 hours/day (IST = UTC+5:30)
     - cron: '30 6 * * *'   # Segment 1: 12:00 PM IST → 5:00 PM IST
     - cron: '30 11 * * *'  # Segment 2:  5:00 PM IST → 10:00 PM IST
 
@@ -16,25 +16,31 @@ jobs:
       - name: Checkout HTML files
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg, Xvfb, Chromium, PulseAudio, TTS, unclutter
+      # ── Install all multimedia & audio packages ───────────────────────
+      - name: Install FFmpeg, Xvfb, Chromium/Chrome, PulseAudio, TTS, unclutter
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg xvfb chromium-browser \
+          sudo apt-get install -y ffmpeg xvfb \
             pulseaudio pulseaudio-utils \
             espeak-ng speech-dispatcher speech-dispatcher-espeak-ng \
             unclutter
 
+      # ── Start PulseAudio Virtual Sink (captures all game audio) ───────
       - name: Start PulseAudio with virtual sink
         run: |
-          pulseaudio --start \
-            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" \
-            --load="module-virtual-source source_name=virtual_in master=virtual_out.monitor" \
-            --exit-idle-time=-1
+          export XDG_RUNTIME_DIR=/tmp/pulse-runtime
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          pulseaudio --daemonize=no --exit-idle-time=-1 \
+            --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulseaudio.socket" \
+            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" &
           sleep 2
-          pactl set-default-sink virtual_out
-          pactl set-default-source virtual_in
+          pactl --server=unix:/tmp/pulseaudio.socket set-default-sink virtual_out
+          echo "PULSE_SERVER=unix:/tmp/pulseaudio.socket" >> $GITHUB_ENV
+          echo "XDG_RUNTIME_DIR=/tmp/pulse-runtime" >> $GITHUB_ENV
 
-      - name: Configure and start Speech Dispatcher (TTS voices)
+      # ── Speech Dispatcher (TTS voices) ────────────────────────────────
+      - name: Configure and start Speech Dispatcher
         run: |
           mkdir -p ~/.config/speech-dispatcher
           cat > ~/.config/speech-dispatcher/speechd.conf << 'EOF'
@@ -42,31 +48,38 @@ jobs:
           DefaultLanguage en
           DefaultVoiceType MALE1
           AudioOutputMethod pulse
-          AudioPulseServer unix:/run/user/$(id -u)/pulse/native
+          AudioPulseServer unix:/tmp/pulseaudio.socket
           EOF
-          speech-dispatcher
+          speech-dispatcher -d
           sleep 2
 
-      - name: Start Xvfb 1080p vertical screen
+      # ── Xvfb Virtual Screen (1080×1920 60Hz Portrait) ────────────────
+      - name: Start Xvfb vertical screen
         run: |
           Xvfb :99 -screen 0 1080x1920x24 &
           sleep 2
           DISPLAY=:99 unclutter -idle 0 -root &
 
-      - name: Launch Chromium in 1080p kiosk mode
+      # ── Launch Chromium with audio & high graphics enabled ───────────
+      - name: Launch Browser in kiosk mode
         run: |
-          DISPLAY=:99 PULSE_SERVER=unix:/run/user/$(id -u)/pulse/native \
-          chromium-browser \
+          BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
+          echo "Launching browser: $BROWSER"
+          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
+          $BROWSER \
             --no-sandbox \
             --disable-gpu \
             --kiosk \
+            --hide-scrollbars \
             --window-size=1080,1920 \
             --window-position=0,0 \
+            --allow-file-access-from-files \
             --autoplay-policy=no-user-gesture-required \
             --disable-features=AutoplayIgnoreWebAudio \
             --enable-audio-focus-enforcement=false \
             --use-fake-ui-for-media-stream \
             --enable-speech-dispatcher \
+            --enable-features=SpeechDispatcher \
             --no-first-run \
             --disable-translate \
             --disable-infobars \
@@ -74,18 +87,22 @@ jobs:
             --disable-background-timer-throttling \
             --disable-renderer-backgrounding \
             --disable-backgrounding-occluded-windows \
-            "file://$GITHUB_WORKSPACE/index.html" &
+            "file://$GITHUB_WORKSPACE/index.html?quality=1.5" &
           sleep 8
 
-      - name: Stream 5 hours to YouTube (1080p)
+      # ── Stream to YouTube Live (Pristine 1080p 60FPS / 9500kbps) ─────
+      # (Note: YouTube Shorts Live mobile apps render at 1080x1920 60fps.
+      #  Streaming at 9500kbps delivers razor-sharp 4K-like visual fidelity)
+      - name: Stream 5 hours to YouTube
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          DISPLAY=:99 timeout 18000 ffmpeg -re \
-            -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
-            -f pulse -i virtual_in \
-            -c:v libx264 -preset veryfast -crf 18 \
-              -b:v 6000k -maxrate 8000k -bufsize 16000k \
-              -pix_fmt yuv420p -g 60 -tune zerolatency \
-            -c:a aac -b:a 192k -ar 44100 -ac 2 \
+          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
+          timeout 18000 ffmpeg -re \
+            -f x11grab -draw_mouse 0 -video_size 1080x1920 -framerate 60 -i :99.0 \
+            -f pulse -i virtual_out.monitor \
+            -c:v libx264 -preset veryfast \
+              -b:v 9500k -maxrate 10500k -bufsize 19000k \
+              -pix_fmt yuv420p -g 120 -tune zerolatency \
+            -c:a aac -b:a 256k -ar 44100 -ac 2 \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY" || true
