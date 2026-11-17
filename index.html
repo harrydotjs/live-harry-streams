@@ -1,11 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=720, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#030616">
-  <title>World CLash Fight // YouTube Vertical Live Battle</title>
+  <title>WORLD CLASH FIGHT // YouTube Vertical Live Battle</title>
   <style>
     :root {
       color-scheme: dark;
@@ -15,43 +15,60 @@
       --purple: #a298ff
     }
 
-    * {
-      box-sizing: border-box
+    *,
+    *::before,
+    *::after,
+    html,
+    body,
+    #stage,
+    canvas {
+      box-sizing: border-box;
+      cursor: none !important;
     }
 
     html,
     body {
       margin: 0;
       padding: 0;
-      width: 720px;
-      height: 1280px;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
+      background: #030919;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: none !important;
     }
 
     body {
-      background: #020615;
       color: #fff;
       font-family: Inter, "Arial Black", system-ui, -apple-system, Segoe UI, sans-serif;
       user-select: none;
-      -webkit-user-select: none
+      -webkit-user-select: none;
     }
 
     #stage {
-      position: relative;
+      position: absolute;
+      left: 50%;
+      top: 50%;
       width: 720px;
       height: 1280px;
+      transform: translate(-50%, -50%);
+      transform-origin: center center;
       overflow: hidden;
       isolation: isolate;
-      background: #03091b
+      background: #030919;
+      cursor: none !important;
     }
 
     #battle {
       position: absolute;
       inset: 0;
-      width: 720px;
-      height: 1280px;
+      width: 100%;
+      height: 100%;
       z-index: 0;
-      display: block
+      display: block;
+      cursor: none !important;
     }
 
     #vignette {
@@ -123,7 +140,7 @@
       font-weight: 1000;
       letter-spacing: -4px;
       line-height: 1.04;
-      margin: 26px -20px 5px;
+      margin: 26px 0 5px;
       white-space: nowrap;
       text-shadow: 0 7px 0 #121c44, 0 9px 22px #020614, 0 0 38px #5c99ffa0
     }
@@ -738,7 +755,7 @@
     </div>
     <footer id="bottom">
       <div>
-        <div id="brand">World<b>Clash Fight</b><em>LIVE</em></div>
+        <div id="brand">WORLD CLASH <b>FIGHT</b><em>LIVE</em></div>
         <div id="brandSub">90 COUNTRIES · ONE SURVIVOR</div>
       </div>
       <div id="bottomRight">
@@ -776,15 +793,157 @@
     const imageRect = i => [(i % CELLS_X) * CW, Math.floor(i / CELLS_X) * CH, CW, CH];
     function flagCanvas(c, i, x, y, w, h) { if (!atlas.complete || !atlas.naturalWidth) return; const s = imageRect(i); c.drawImage(atlas, s[0], s[1], s[2], s[3], x, y, w, h) }
     function flagPortrait(node, i) { const c = node.getContext('2d'); c.clearRect(0, 0, node.width, node.height); let pad = node.width * .02; flagCanvas(c, i, pad, node.height * .1, node.width - pad * 2, node.height * .8) }
-    function unlockAudio() { if (hasSound) return; try { const Audio = window.AudioContext || window.webkitAudioContext; if (!Audio) throw Error('unsupported'); audio = audio || new Audio(); if (!noiseBuffer) { noiseBuffer = audio.createBuffer(1, Math.floor(audio.sampleRate * .5), audio.sampleRate); let arr = noiseBuffer.getChannelData(0); for (let j = 0; j < arr.length; j++)arr[j] = Math.random() * 2 - 1; } audio.resume().then(() => { if (audio.state === 'running') { hasSound = true; $('soundNote').textContent = '🔊 IMPACT SFX + ANNOUNCER'; $('soundNote').classList.add('active'); } }).catch(() => { }); } catch (e) { $('soundNote').textContent = 'AUDIO UNAVAILABLE'; } }
-    window.addEventListener('pointerdown', unlockAudio, { passive: true }); window.addEventListener('keydown', unlockAudio);
-    // Browser autoplay rules can block SFX/voices until the first user gesture; the actual battle never waits.
-    function burstNoise(time, len, band, vol) { if (!hasSound || !audio || audio.state !== 'running') return; let n = audio.createBufferSource(), filter = audio.createBiquadFilter(), gain = audio.createGain(); n.buffer = noiseBuffer; filter.type = 'bandpass'; filter.frequency.setValueAtTime(band, time); filter.Q.value = .8; gain.gain.setValueAtTime(Math.max(.0001, vol), time); gain.gain.exponentialRampToValueAtTime(.0001, time + len); n.connect(filter); filter.connect(gain); gain.connect(audio.destination); n.start(time); n.stop(time + len) }
-    function dropTone(time, hi, lo, len, vol, shape = 'triangle') { if (!hasSound || !audio || audio.state !== 'running') return; let osc = audio.createOscillator(), g = audio.createGain(); osc.type = shape; osc.frequency.setValueAtTime(hi, time); osc.frequency.exponentialRampToValueAtTime(Math.max(25, lo), time + len); g.gain.setValueAtTime(.0001, time); g.gain.exponentialRampToValueAtTime(vol, time + .008); g.gain.exponentialRampToValueAtTime(.0001, time + len); osc.connect(g); g.connect(audio.destination); osc.start(time); osc.stop(time + len + .03) }
-    function crashSound(power = 1) { if (!hasSound || audio.currentTime - lastCrashSfx < .12) return; lastCrashSfx = audio.currentTime; let t = audio.currentTime, v = Math.min(.065, .012 + power * .022); burstNoise(t, .1, rnd(650, 1700), v); dropTone(t, rnd(210, 340), rnd(60, 130), .13, v * .8) }
-    function megaSound() { if (!hasSound) return; let t = audio.currentTime; burstNoise(t, .4, 230, .15); burstNoise(t + .045, .22, 1600, .08); dropTone(t, 340, 34, .48, .18, 'sawtooth'); dropTone(t + .09, 1200, 150, .24, .045, 'square') }
-    function winSound() { if (!hasSound) return; let t = audio.currentTime;[349, 440, 523, 698, 880].forEach((f, i) => dropTone(t + i * .14, f, f * 1.16, .43, .055, 'sine')) }
-    function speak(message) { if (location.hostname === '127.0.0.1' && location.port === '8765') { fetch('/voice', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: message }).catch(() => { }); return } if (!hasSound || !('speechSynthesis' in window)) return; try { const v = new SpeechSynthesisUtterance(message); v.lang = 'en-US'; v.rate = 1.14; v.pitch = .90; v.volume = .95; const voices = speechSynthesis.getVoices(); v.voice = voices.find(x => /en-(US|GB|IN)/i.test(x.lang) && /natural|google|microsoft/i.test(x.name)) || voices.find(x => x.lang.startsWith('en')) || null; speechSynthesis.speak(v) } catch (e) { } }
+    function fitToScreen() {
+      const stage = $('stage');
+      if (!stage) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      if (!vw || !vh) return;
+      const scale = Math.min(vw / 720, vh / 1280);
+      stage.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+    }
+    window.addEventListener('resize', fitToScreen);
+    window.addEventListener('DOMContentLoaded', fitToScreen);
+    setTimeout(fitToScreen, 50);
+
+    const activeUtterances = [];
+    function initAudio() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        if (!audio) {
+          audio = new AudioCtx();
+        }
+        if (audio && !noiseBuffer) {
+          noiseBuffer = audio.createBuffer(1, Math.floor(audio.sampleRate * .5), audio.sampleRate);
+          let arr = noiseBuffer.getChannelData(0);
+          for (let j = 0; j < arr.length; j++) arr[j] = Math.random() * 2 - 1;
+        }
+        if (audio && audio.state === 'running') {
+          hasSound = true;
+          const sn = $('soundNote');
+          if (sn) { sn.textContent = '🔊 AUDIO ACTIVE'; sn.classList.add('active'); }
+        } else if (audio && audio.state !== 'running') {
+          audio.resume().then(() => {
+            if (audio.state === 'running') {
+              hasSound = true;
+              const sn = $('soundNote');
+              if (sn) { sn.textContent = '🔊 AUDIO ACTIVE'; sn.classList.add('active'); }
+            }
+          }).catch(() => {});
+        }
+      } catch (e) {}
+      return audio;
+    }
+
+    ['pointerdown', 'mousedown', 'mouseup', 'keydown', 'touchstart', 'touchend', 'click', 'focus', 'mousemove', 'visibilitychange'].forEach(ev => {
+      window.addEventListener(ev, initAudio, { passive: true });
+    });
+
+    setInterval(() => {
+      if ('speechSynthesis' in window && speechSynthesis.speaking && speechSynthesis.paused) {
+        try { speechSynthesis.resume(); } catch (e) {}
+      }
+      initAudio();
+    }, 2500);
+
+    function burstNoise(time, len, band, vol) {
+      const ctx = initAudio();
+      if (!ctx || !noiseBuffer) return;
+      try {
+        let n = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        n.buffer = noiseBuffer;
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(band, time);
+        filter.Q.value = .8;
+        gain.gain.setValueAtTime(Math.max(.0001, vol), time);
+        gain.gain.exponentialRampToValueAtTime(.0001, time + len);
+        n.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        n.start(time);
+        n.stop(time + len);
+      } catch (e) {}
+    }
+
+    function dropTone(time, hi, lo, len, vol, shape = 'triangle') {
+      const ctx = initAudio();
+      if (!ctx) return;
+      try {
+        let osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = shape;
+        osc.frequency.setValueAtTime(hi, time);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(25, lo), time + len);
+        g.gain.setValueAtTime(.0001, time);
+        g.gain.exponentialRampToValueAtTime(vol, time + .008);
+        g.gain.exponentialRampToValueAtTime(.0001, time + len);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + len + .03);
+      } catch (e) {}
+    }
+
+    function chordAlert(time, freqs, len = .32, vol = .2) {
+      freqs.forEach((f, i) => {
+        dropTone(time + i * .05, f, f * .92, len, vol, 'sine');
+      });
+    }
+
+    function crashSound(power = 1) {
+      const ctx = initAudio();
+      if (!ctx) return;
+      if (ctx.currentTime - lastCrashSfx < .08) return;
+      lastCrashSfx = ctx.currentTime;
+      let t = ctx.currentTime, v = Math.min(.28, .05 + power * .08);
+      burstNoise(t, .12, rnd(600, 1800), v);
+      dropTone(t, rnd(240, 420), rnd(60, 140), .15, v * .9);
+    }
+
+    function megaSound() {
+      const ctx = initAudio();
+      if (!ctx) return;
+      let t = ctx.currentTime;
+      burstNoise(t, .48, 230, .35);
+      burstNoise(t + .04, .25, 1600, .18);
+      dropTone(t, 420, 35, .55, .35, 'sawtooth');
+      dropTone(t + .08, 1400, 150, .28, .12, 'square');
+      chordAlert(t + .12, [659, 494, 330], .42, .24);
+    }
+
+    function winSound() {
+      const ctx = initAudio();
+      if (!ctx) return;
+      let t = ctx.currentTime;
+      [349, 440, 523, 698, 880, 1046].forEach((f, i) => dropTone(t + i * .13, f, f * 1.05, .45, .18, 'sine'));
+      chordAlert(t + .85, [523, 659, 783, 1046], .6, .22);
+    }
+
+    function speak(message) {
+      const ctx = initAudio();
+      if (ctx) {
+        let t = ctx.currentTime;
+        chordAlert(t, [587, 740, 880], .28, .18);
+      }
+      if (!('speechSynthesis' in window)) return;
+      try {
+        speechSynthesis.resume();
+        const v = new SpeechSynthesisUtterance(message);
+        v.lang = 'en-US';
+        v.rate = 1.12;
+        v.pitch = .92;
+        v.volume = 1.0;
+        const voices = speechSynthesis.getVoices();
+        if (voices && voices.length) {
+          v.voice = voices.find(x => /en-(US|GB|IN)/i.test(x.lang) && /natural|google|microsoft/i.test(x.name)) || voices.find(x => x.lang.startsWith('en')) || null;
+        }
+        activeUtterances.push(v);
+        v.onend = () => { const i = activeUtterances.indexOf(v); if (i !== -1) activeUtterances.splice(i, 1); };
+        v.onerror = () => { const i = activeUtterances.indexOf(v); if (i !== -1) activeUtterances.splice(i, 1); };
+        speechSynthesis.speak(v);
+      } catch (e) {}
+    }
+
     function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(rnd(0, i + 1));[a[i], a[j]] = [a[j], a[i]] } return a }
     function createFighter(c, i) { let a = rnd(0, PI2), distance = Math.sqrt(Math.random()) * (R - 32), direction = rnd(0, PI2), speed = rnd(95, 155); return { ...c, x: CX + Math.cos(a) * distance, y: CY + Math.sin(a) * distance, vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, angle: direction, r: 15.5, hp: 100, shield: 0, kills: 0, alive: true, hurt: 0, boost: 0, attackTimer: rnd(.1, 2.8), target: null, life: i, hitCooldown: 0, color: shades[i % shades.length], trail: [], trailTimer: 0, spin: rnd(-.35, .35) } }
     function reset(advance = false) { if (advance) round++; fighters = shuffle(COUNTRIES.slice()).map(createFighter); fx = []; shockwaves = []; beams = []; floats = []; smokes = []; alive = TOTAL; roundTime = 0; koClock = 0; koInterval = rnd(3, 5); powerClock = 0; nextPower = rnd(14, 19); battleR = R; targetR = R; victories = 0; winTime = -1; whiteFlash = 0; shake = 0; hitCount = 0; toastTime = 0; $('winner').classList.remove('show'); $('event').classList.remove('show'); $('round').textContent = 'ROUND ' + String(round).padStart(3, '0'); updateHUD() }
@@ -797,7 +956,7 @@
     function announcement(type, text, kind = '') { annQueue.push({ type, text, kind }); if (annQueue.length > 5) annQueue.shift(); if (!annActive) nextAnnouncement() }
     function nextAnnouncement() { const a = annQueue.shift(); if (!a) { annActive = false; return } annActive = true; annVisibleUntil = globalTime + 4.8; $('calloutLabel').textContent = a.type; $('calloutMessage').textContent = a.text; $('callout').className = 'show ' + (a.kind === 'subscribe' ? 'subscribe' : ''); speak(a.text) }
     function runAnnouncements() { if (globalTime >= nextChat) { nextChat += 120; announcement('💬 W CHAT', 'W chat, is your country still alive?') }; if (globalTime >= nextLike) { nextLike += 60; announcement('❤️ LIKE CHALLENGE', 'If your country is still alive, hit a like!') }; if (globalTime >= nextSub) { nextSub += 90; const name = firstNames[Math.floor(Math.random() * firstNames.length)]; announcement('⭐ SIMULATED SUBSCRIBER SHOUT-OUT', 'Simulated subscriber shout-out! Thank you ' + name + ' for subscribing!', 'subscribe') } }
-    function overdrive() { if (alive <= 1) return; const options = fighters.filter(f => f.alive).sort((a, b) => a.hp - b.hp); const lucky = options[Math.floor(rnd(0, Math.max(1, Math.ceil(options.length * .25))))]; lucky.shield = 40; lucky.boost = 2.5; lucky.hp = Math.min(100, lucky.hp + 13); let a = rnd(0, PI2); lucky.vx = Math.cos(a) * 330; lucky.vy = Math.sin(a) * 330; particles(lucky.x, lucky.y, 34, '#82ffdd', 1.25); shock(lucky.x, lucky.y, '#82ffda', 1.1); floating(lucky.x, lucky.y, 'BOOST!', '#9dffdf', 24); banner('⚡ OVERDRIVE ACTIVATED', 'power'); if (hasSound) { let t = audio.currentTime; dropTone(t, 180, 680, .23, .05, 'sine') } }
+    function overdrive() { if (alive <= 1) return; const options = fighters.filter(f => f.alive).sort((a, b) => a.hp - b.hp); const lucky = options[Math.floor(rnd(0, Math.max(1, Math.ceil(options.length * .25))))]; lucky.shield = 40; lucky.boost = 2.5; lucky.hp = Math.min(100, lucky.hp + 13); let a = rnd(0, PI2); lucky.vx = Math.cos(a) * 330; lucky.vy = Math.sin(a) * 330; particles(lucky.x, lucky.y, 34, '#82ffdd', 1.25); shock(lucky.x, lucky.y, '#82ffda', 1.1); floating(lucky.x, lucky.y, 'BOOST!', '#9dffdf', 24); banner('⚡ OVERDRIVE ACTIVATED', 'power'); const ctx = initAudio(); if (ctx) { let t = ctx.currentTime; dropTone(t, 180, 680, .28, .18, 'sine'); chordAlert(t + .04, [440, 659, 880], .25, .14); } }
     function impact(a, b, nx, ny, force) { const damage = Math.min(15, Math.max(.3, (force - 26) * .04)); if (a.shield > 0) a.shield = Math.max(0, a.shield - damage * .9); else a.hp = Math.max(1, a.hp - damage); if (b.shield > 0) b.shield = Math.max(0, b.shield - damage * .9); else b.hp = Math.max(1, b.hp - damage); a.hurt = b.hurt = .95; hitCount++; const x = (a.x + b.x) * .5, y = (a.y + b.y) * .5; let power = Math.min(2.2, force / 155); particles(x, y, Math.round(5 + power * 6), Math.random() < .5 ? '#b5f7ff' : '#ffe4b1', power); if (force > 115) { shock(x, y, '#a7efff', .55); beam(x - ny * 22, y + nx * 22, x + ny * 22, y - nx * 22, '#fff3c1'); shake = Math.min(18, shake + force * .014); whiteFlash = Math.min(.25, whiteFlash + .027); if (Math.random() < .12) floating(x, y, 'CRASH!', '#fff0b3', 21) } crashSound(power) }
     function pickTarget(f) { if (alive <= 1) return; let options = fighters.filter(o => o.alive && o !== f); f.target = options[Math.floor(rnd(0, options.length))]; f.attackTimer = rnd(1.2, 3.7) }
     function physics(dt) {
@@ -831,7 +990,7 @@
     function formatTime(t) { let v = Math.floor(t); return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0') }
     function updateHUD() { $('aliveNum').textContent = alive; $('outCount').textContent = TOTAL - alive; $('time').textContent = formatTime(roundTime); $('hitCount').textContent = hitCount.toLocaleString('en-US'); const best = fighters.filter(f => f.alive).sort((a, b) => b.kills - a.kills || b.hp - a.hp)[0]; $('topFighter').textContent = best ? (best.n.length > 21 ? best.n.slice(0, 18) + '…' : best.n.toUpperCase()) + ' · ' + best.kills + ' KOs' : '—' }
     function tick(dt) {
-      globalTime += dt; runAnnouncements(); if (annActive && globalTime > annVisibleUntil) { $('callout').classList.remove('show'); annActive = false; nextAnnouncement() }
+      globalTime += dt; if (!hasSound || (audio && audio.state !== 'running')) initAudio(); runAnnouncements(); if (annActive && globalTime > annVisibleUntil) { $('callout').classList.remove('show'); annActive = false; nextAnnouncement() }
       if (winTime >= 0) { winTime += dt; $('restartSec').textContent = Math.max(0, Math.ceil(8 - winTime)); if (winTime >= 8) reset(true); decay(dt); return }
       roundTime += dt; koClock += dt; uiClock += dt; powerClock += dt; battleR += (targetR - battleR) * Math.min(1, dt * 1.5); if (powerClock >= nextPower) { powerClock = 0; nextPower = rnd(14, 20); overdrive() } bannerTime = Math.max(0, bannerTime - dt); if (bannerTime <= 0) $('battleBanner').classList.remove('show');
       const physicsDt = crashSlow > 0 ? dt * .55 : dt; crashSlow = Math.max(0, crashSlow - dt);
@@ -842,8 +1001,8 @@
     }
     function decay(dt) { for (let i = fx.length - 1; i >= 0; i--) { const p = fx[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += dt * 110; p.vx *= Math.max(0, 1 - dt * 1.2); if (p.life <= 0) fx.splice(i, 1) } for (let i = smokes.length - 1; i >= 0; i--) { const p = smokes[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life <= 0) smokes.splice(i, 1) } for (let i = shockwaves.length - 1; i >= 0; i--) { let v = shockwaves[i]; v.life -= dt; v.r += v.speed * dt; if (v.life <= 0) shockwaves.splice(i, 1) } for (let i = beams.length - 1; i >= 0; i--) { let v = beams[i]; v.life -= dt; if (v.life <= 0) beams.splice(i, 1) } for (let i = floats.length - 1; i >= 0; i--) { let v = floats[i]; v.life -= dt; v.y -= dt * 45; if (v.life <= 0) floats.splice(i, 1) } shake = Math.max(0, shake - dt * 64); whiteFlash = Math.max(0, whiteFlash - dt * 2.5); $('flash').style.opacity = whiteFlash; toastTime = Math.max(0, toastTime - dt); if (toastTime === 0) $('event').classList.remove('show') }
     function draw(time) {
-      ctx.fillStyle = '#030919'; ctx.fillRect(0, 0, W, H);
-      let back = ctx.createRadialGradient(CX, CY - 29, 50, CX, CY - 39, 800); back.addColorStop(0, '#1a3a68'); back.addColorStop(.55, '#09172f'); back.addColorStop(1, '#020513'); ctx.fillStyle = back; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#030919'; ctx.fillRect(-40, -40, W + 80, H + 80);
+      let back = ctx.createRadialGradient(CX, CY - 29, 50, CX, CY - 39, 850); back.addColorStop(0, '#1a3a68'); back.addColorStop(.55, '#09172f'); back.addColorStop(1, '#030919'); ctx.fillStyle = back; ctx.fillRect(-40, -40, W + 80, H + 80);
       ctx.save(); ctx.translate(rnd(-shake, shake) * .55, rnd(-shake, shake) * .55);
       ctx.globalAlpha = .13; ctx.strokeStyle = '#5284af'; ctx.lineWidth = .85; ctx.beginPath(); for (let x = 0; x < W; x += 34) { ctx.moveTo(x, 0); ctx.lineTo(x, H) } for (let y = 0; y < H; y += 34) { ctx.moveTo(0, y); ctx.lineTo(W, y) } ctx.stroke(); ctx.globalAlpha = 1;
       for (let st of stars) { ctx.globalAlpha = .15 + .26 * Math.sin(time * .9 + st.phase) ** 2; ctx.fillStyle = '#a6ddff'; ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, PI2); ctx.fill() } ctx.globalAlpha = 1;
@@ -867,7 +1026,7 @@
       ctx.save(); ctx.translate(CX, CY); ctx.rotate(time * .18); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, 0, battleR, i * PI2 / 3, i * PI2 / 3 + .26); ctx.strokeStyle = '#e8ffff'; ctx.lineWidth = 6; ctx.shadowColor = '#9ff4ff'; ctx.shadowBlur = 15; ctx.stroke() } ctx.restore(); ctx.restore();
     }
     let previous = 0; function frame(t) { const dt = previous ? Math.min(.06, (t - previous) / 1000) : 0; previous = t; tick(dt); draw(t / 1000); requestAnimationFrame(frame) }
-    reset(); unlockAudio(); atlas.addEventListener('load', () => { if ($('event').classList.contains('show')) { const last = fighters.find(f => !f.alive); if (last) flagPortrait($('eventFlag'), last.i) } }); requestAnimationFrame(frame);
+    reset(); initAudio(); fitToScreen(); atlas.addEventListener('load', () => { if ($('event').classList.contains('show')) { const last = fighters.find(f => !f.alive); if (last) flagPortrait($('eventFlag'), last.i) } }); requestAnimationFrame(frame);
   </script>
 </body>
 
