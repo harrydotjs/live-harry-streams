@@ -1,0 +1,37 @@
+name: 12-Hour Daily 9:16 Shorts Stream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+    - cron: '0 12 * * *'
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout HTML files
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg, Xvfb, and Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xvfb chromium-browser
+
+      - name: Start 9:16 Virtual Screen & Stream HTML
+        env:
+          KEY: ${{ secrets.STREAM_KEY }}
+        run: |
+          Xvfb :99 -screen 0 720x1280x24 &
+          export DISPLAY=:99
+          sleep 2
+
+          chromium-browser --no-sandbox --disable-gpu --kiosk --window-size=720,1280 "file://$GITHUB_WORKSPACE/index.html" &
+          sleep 3
+
+          ffmpeg -re -f x11grab -video_size 720x1280 -framerate 24 -i :99 \
+            -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+            -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 2500k -bufsize 5000k \
+            -pix_fmt yuv420p -g 48 -c:a aac -b:a 128k \
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY"
