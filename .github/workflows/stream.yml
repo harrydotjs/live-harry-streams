@@ -1,37 +1,86 @@
-name: 12-Hour Daily 9:16 Shorts Stream
+name: World Clash Fight – 9:16 YouTube Live Stream
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * *'
-    - cron: '0 12 * * *'
+    - cron: '0 6 * * *'   # 11:30 AM IST
+    - cron: '0 12 * * *'  # 5:30 PM IST
 
 jobs:
   stream:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+
     steps:
       - name: Checkout HTML files
         uses: actions/checkout@v4
 
-      - name: Install FFmpeg, Xvfb, and Chromium
+      # ── Install all dependencies ──────────────────────────────────────
+      - name: Install FFmpeg, Xvfb, Chromium, PulseAudio, unclutter
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg xvfb chromium-browser
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg xvfb chromium-browser \
+            pulseaudio pulseaudio-utils unclutter
 
-      - name: Start 9:16 Virtual Screen & Stream HTML
+      # ── PulseAudio virtual audio sink ─────────────────────────────────
+      # Creates a virtual speaker so Chromium audio is capturable by FFmpeg
+      - name: Start PulseAudio with virtual sink
+        run: |
+          pulseaudio --start \
+            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" \
+            --load="module-virtual-source source_name=virtual_in master=virtual_out.monitor" \
+            --exit-idle-time=-1
+          sleep 2
+          # Route all new streams to the virtual sink automatically
+          pactl set-default-sink virtual_out
+          pactl set-default-source virtual_in
+
+      # ── Xvfb virtual display (720×1280 vertical) ──────────────────────
+      - name: Start Xvfb vertical screen
+        run: |
+          Xvfb :99 -screen 0 720x1280x24 &
+          sleep 2
+          # Hide the X11 hardware cursor (CSS cursor:none only hides browser cursor)
+          DISPLAY=:99 unclutter -idle 0 -root &
+          echo "Xvfb and unclutter started"
+
+      # ── Chromium with audio unlocked ──────────────────────────────────
+      - name: Launch Chromium in kiosk mode
+        run: |
+          DISPLAY=:99 PULSE_SERVER=unix:/run/user/1001/pulse/native \
+          chromium-browser \
+            --no-sandbox \
+            --disable-gpu \
+            --kiosk \
+            --window-size=720,1280 \
+            --window-position=0,0 \
+            --start-maximized \
+            --autoplay-policy=no-user-gesture-required \
+            --disable-features=AutoplayIgnoreWebAudio \
+            --enable-audio-focus-enforcement=false \
+            --use-fake-ui-for-media-stream \
+            --no-first-run \
+            --disable-translate \
+            --disable-infobars \
+            --disable-notifications \
+            --disable-background-timer-throttling \
+            --disable-renderer-backgrounding \
+            --disable-backgrounding-occluded-windows \
+            "file://$GITHUB_WORKSPACE/index.html" &
+          sleep 6
+          echo "Chromium launched"
+
+      # ── FFmpeg: capture screen + PulseAudio → YouTube RTMP ───────────
+      # Audio captured from virtual_in (which monitors Chromium's output)
+      - name: Stream to YouTube (highest quality)
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          Xvfb :99 -screen 0 720x1280x24 &
-          export DISPLAY=:99
-          sleep 2
-
-          chromium-browser --no-sandbox --disable-gpu --kiosk --window-size=720,1280 "file://$GITHUB_WORKSPACE/index.html" &
-          sleep 3
-
-          ffmpeg -re -f x11grab -video_size 720x1280 -framerate 24 -i :99 \
-            -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
-            -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 2500k -bufsize 5000k \
-            -pix_fmt yuv420p -g 48 -c:a aac -b:a 128k \
+          DISPLAY=:99 ffmpeg -re \
+            -f x11grab -video_size 720x1280 -framerate 30 -i :99.0 \
+            -f pulse -i virtual_in \
+            -c:v libx264 -preset veryfast -crf 18 \
+              -b:v 4500k -maxrate 6000k -bufsize 12000k \
+              -pix_fmt yuv420p -g 60 -tune zerolatency \
+            -c:a aac -b:a 192k -ar 44100 -ac 2 \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY"
