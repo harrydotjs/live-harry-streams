@@ -1,29 +1,29 @@
-name: World Clash Fight – 9:16 YouTube Live Stream
+name: World Clash Fight – Daily 10hr Stream
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # keep for manual test runs
   schedule:
-    - cron: '0 6 * * *'   # 11:30 AM IST
-    - cron: '0 12 * * *'  # 5:30 PM IST
+    # 2 segments × 5 hours = 10 hours/day  (IST = UTC+5:30)
+    - cron: '30 6 * * *'   # Segment 1: 12:00 PM IST → 5:00 PM IST
+    - cron: '30 11 * * *'  # Segment 2:  5:00 PM IST → 10:00 PM IST
 
 jobs:
   stream:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 310   # 5 hrs + 10 min buffer for setup
 
     steps:
       - name: Checkout HTML files
         uses: actions/checkout@v4
 
-      # ── Install all dependencies ──────────────────────────────────────
-      - name: Install FFmpeg, Xvfb, Chromium, PulseAudio, unclutter
+      - name: Install FFmpeg, Xvfb, Chromium, PulseAudio, TTS, unclutter
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg xvfb chromium-browser \
-            pulseaudio pulseaudio-utils unclutter
+            pulseaudio pulseaudio-utils \
+            espeak-ng speech-dispatcher speech-dispatcher-espeak-ng \
+            unclutter
 
-      # ── PulseAudio virtual audio sink ─────────────────────────────────
-      # Creates a virtual speaker so Chromium audio is capturable by FFmpeg
       - name: Start PulseAudio with virtual sink
         run: |
           pulseaudio --start \
@@ -31,34 +31,42 @@ jobs:
             --load="module-virtual-source source_name=virtual_in master=virtual_out.monitor" \
             --exit-idle-time=-1
           sleep 2
-          # Route all new streams to the virtual sink automatically
           pactl set-default-sink virtual_out
           pactl set-default-source virtual_in
 
-      # ── Xvfb virtual display (720×1280 vertical) ──────────────────────
-      - name: Start Xvfb vertical screen
+      - name: Configure and start Speech Dispatcher (TTS voices)
         run: |
-          Xvfb :99 -screen 0 720x1280x24 &
+          mkdir -p ~/.config/speech-dispatcher
+          cat > ~/.config/speech-dispatcher/speechd.conf << 'EOF'
+          DefaultModule espeak-ng
+          DefaultLanguage en
+          DefaultVoiceType MALE1
+          AudioOutputMethod pulse
+          AudioPulseServer unix:/run/user/$(id -u)/pulse/native
+          EOF
+          speech-dispatcher
           sleep 2
-          # Hide the X11 hardware cursor (CSS cursor:none only hides browser cursor)
-          DISPLAY=:99 unclutter -idle 0 -root &
-          echo "Xvfb and unclutter started"
 
-      # ── Chromium with audio unlocked ──────────────────────────────────
-      - name: Launch Chromium in kiosk mode
+      - name: Start Xvfb 1080p vertical screen
         run: |
-          DISPLAY=:99 PULSE_SERVER=unix:/run/user/1001/pulse/native \
+          Xvfb :99 -screen 0 1080x1920x24 &
+          sleep 2
+          DISPLAY=:99 unclutter -idle 0 -root &
+
+      - name: Launch Chromium in 1080p kiosk mode
+        run: |
+          DISPLAY=:99 PULSE_SERVER=unix:/run/user/$(id -u)/pulse/native \
           chromium-browser \
             --no-sandbox \
             --disable-gpu \
             --kiosk \
-            --window-size=720,1280 \
+            --window-size=1080,1920 \
             --window-position=0,0 \
-            --start-maximized \
             --autoplay-policy=no-user-gesture-required \
             --disable-features=AutoplayIgnoreWebAudio \
             --enable-audio-focus-enforcement=false \
             --use-fake-ui-for-media-stream \
+            --enable-speech-dispatcher \
             --no-first-run \
             --disable-translate \
             --disable-infobars \
@@ -67,20 +75,17 @@ jobs:
             --disable-renderer-backgrounding \
             --disable-backgrounding-occluded-windows \
             "file://$GITHUB_WORKSPACE/index.html" &
-          sleep 6
-          echo "Chromium launched"
+          sleep 8
 
-      # ── FFmpeg: capture screen + PulseAudio → YouTube RTMP ───────────
-      # Audio captured from virtual_in (which monitors Chromium's output)
-      - name: Stream to YouTube (highest quality)
+      - name: Stream 5 hours to YouTube (1080p)
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          DISPLAY=:99 ffmpeg -re \
-            -f x11grab -video_size 720x1280 -framerate 30 -i :99.0 \
+          DISPLAY=:99 timeout 18000 ffmpeg -re \
+            -f x11grab -video_size 1080x1920 -framerate 30 -i :99.0 \
             -f pulse -i virtual_in \
             -c:v libx264 -preset veryfast -crf 18 \
-              -b:v 4500k -maxrate 6000k -bufsize 12000k \
+              -b:v 6000k -maxrate 8000k -bufsize 16000k \
               -pix_fmt yuv420p -g 60 -tune zerolatency \
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY"
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY" || true
