@@ -27,45 +27,93 @@
             justify-content: center;
         }
 
-        /* ── Horizontal 16:9 YouTube Broadcast Canvas (1920x1080) ─────── */
+        /* ── Vertical 9:16 YouTube Shorts Stream Canvas (1080x1920) ─────── */
         #stream-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 177.78vh;
-            /* 16/9 aspect ratio */
-            max-height: 56.25vw;
-            aspect-ratio: 16 / 9;
+            max-width: 56.25vh;
+            /* 9:16 aspect ratio (9/16 = 56.25vh) */
+            aspect-ratio: 9 / 16;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: #000;
+            background: #05070d;
             box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
         }
 
-        /* Video Stage: Holds the direct video player */
-        #video-stage {
+        /* Ambient blurred background lighting filling top/bottom margins */
+        #ambient-glow {
             position: absolute;
-            inset: 0;
+            inset: -30px;
+            z-index: 1;
+            overflow: hidden;
+            filter: blur(45px) brightness(0.38);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        #ambient-video {
             width: 100%;
             height: 100%;
-            z-index: 1;
+            object-fit: cover;
+            border: none;
+        }
+
+        /* Top & Bottom Cinematic Gradient Mask over Ambient Glow */
+        #stream-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom,
+                    rgba(5, 7, 13, 0.9) 0%,
+                    rgba(5, 7, 13, 0.25) 20%,
+                    transparent 35%,
+                    transparent 65%,
+                    rgba(5, 7, 13, 0.35) 80%,
+                    rgba(5, 7, 13, 0.96) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Video Stage: Centers the 1:1 Square Video vertically */
+        #video-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #000;
             overflow: hidden;
         }
 
-        /* Direct HTML5 Video Player */
+        /* ── 1:1 Square Video Frame (1080px × 1080px in 9:16 Shorts Feed) ── */
+        #player-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            /* Exact 1:1 Square Ratio */
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.95), 0 0 45px rgba(255, 0, 80, 0.22);
+            border-top: 2px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Direct HTML5 Video Player inside 1:1 Frame */
         #stream-video {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            /* Preserves video aspect ratio cleanly */
+            object-fit: cover;
+            /* Crops 16:9 widescreen into a pure 1:1 square with zero letterboxing */
             background: #000;
             border: none;
             outline: none;
@@ -73,8 +121,9 @@
             /* Hides all mouse/control interaction */
         }
 
-        .fit-cover #stream-video {
-            object-fit: cover !important;
+        .fit-contain #stream-video {
+            object-fit: contain !important;
+            /* Letterboxed inside 1:1 square if requested */
         }
 
         /* Transparent Shield: blocks all user interaction & prevents controls */
@@ -86,7 +135,7 @@
             cursor: none !important;
         }
 
-        /* ── Broadcast Overlays ─────────────────────────────────────── */
+        /* ── Broadcast Overlays (Top & Bottom Margins of 9:16 Canvas) ──── */
         #overlays {
             position: absolute;
             inset: 0;
@@ -95,7 +144,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 24px 32px;
+            padding: 80px 22px 55px 22px;
         }
 
         /* Top Bar: LIVE Badge & Call-To-Action */
@@ -357,12 +406,19 @@
 
 <body>
     <div id="stream-container">
-        <!-- Video Stage (Direct HTML5 Video) -->
+        <!-- Ambient background for vertical feed -->
+        <div id="ambient-glow">
+            <video id="ambient-video" playsinline autoplay loop muted preload="auto"></video>
+        </div>
+
+        <!-- Video Stage (Centers the 1:1 Square Video) -->
         <div id="video-stage">
-            <video id="stream-video" playsinline autoplay loop preload="auto">
-            </video>
-            <!-- Click shield prevents player controls & interaction -->
-            <div id="shield"></div>
+            <div id="player-wrapper">
+                <video id="stream-video" playsinline autoplay loop preload="auto">
+                </video>
+                <!-- Click shield prevents player controls & interaction -->
+                <div id="shield"></div>
+            </div>
         </div>
 
         <!-- Broadcast Overlays -->
@@ -372,7 +428,7 @@
                 <div class="live-tag">LIVE</div>
                 <div class="cta-pill" id="topCta">
                     <span class="heart">❤️</span>
-                    <span>DOUBLE TAP SCREEN</span>
+                    <span>LIKE</span>
                     <span class="bell">🔔</span>
                     <span>SUBSCRIBE</span>
                 </div>
@@ -381,7 +437,7 @@
             <!-- Reaction Hearts Animation -->
             <div class="reaction-container" id="reactionBox"></div>
 
-            <!-- Bottom Engagement Banner -->
+
 
         </div>
     </div>
@@ -396,7 +452,7 @@
         const DEFAULT_VIDEO_FILE = 'https://archive.org/download/video_20261118/video.mp4';
 
         // Default starting timestamp: in seconds or mm:ss format (e.g. 0, 90, '1:30', '3:00')
-        const DEFAULT_START_TIME = '44:00';
+        const DEFAULT_START_TIME = '50:00';
 
         // Helper: converts seconds, '1:30', '01:15:30', or '2m15s' into integer seconds
         function parseTimeToSeconds(timeVal) {
@@ -427,11 +483,11 @@
         let VIDEO_SRC = params.get('v') || params.get('video') || params.get('src') || DEFAULT_VIDEO_FILE;
         const rawTime = params.get('t') || params.get('start') || DEFAULT_START_TIME;
         const START_TIME = parseTimeToSeconds(rawTime);
-        const FIT_MODE = params.get('fit') || 'contain'; // 'contain' or 'cover'
+        const FIT_MODE = params.get('fit') || 'cover'; // Default 'cover' crops 16:9 to fill 1:1 square
         const ANNOUNCE_INTERVAL = Math.max(25, Number(params.get('interval')) || 60);
 
-        if (FIT_MODE === 'cover') {
-            document.getElementById('video-stage').classList.add('fit-cover');
+        if (FIT_MODE === 'contain') {
+            document.getElementById('player-wrapper').classList.add('fit-contain');
         }
 
         console.log(`[Stream Player] Loading video: ${VIDEO_SRC} | Starting at: ${START_TIME}s`);
@@ -440,32 +496,71 @@
         // 2. DIRECT HTML5 VIDEO PLAYER (ZERO CONTROLS, AUTONOMOUS AUTO-LOOP)
         // ═══════════════════════════════════════════════════════════════
         const videoEl = document.getElementById('stream-video');
-        videoEl.src = VIDEO_SRC;
+        const ambientEl = document.getElementById('ambient-video');
+
+        // Apply HTML5 Media Fragment directly so browser buffers from START_TIME from the very first byte
+        if (START_TIME > 0 && !VIDEO_SRC.includes('#t=')) {
+            videoEl.src = `${VIDEO_SRC}#t=${START_TIME}`;
+        } else {
+            videoEl.src = VIDEO_SRC;
+        }
+
+        if (ambientEl) {
+            ambientEl.src = videoEl.src;
+            ambientEl.muted = true;
+        }
 
         // Auto fallback: if local file is missing, stream directly from archive.org
         videoEl.addEventListener('error', () => {
-            if (VIDEO_SRC !== DEFAULT_VIDEO_FILE) {
+            if (!videoEl.src.includes('archive.org')) {
                 console.warn('[Stream Player] Local video not found, streaming from archive.org:', DEFAULT_VIDEO_FILE);
                 VIDEO_SRC = DEFAULT_VIDEO_FILE;
-                videoEl.src = DEFAULT_VIDEO_FILE;
+                videoEl.src = START_TIME > 0 ? `${DEFAULT_VIDEO_FILE}#t=${START_TIME}` : DEFAULT_VIDEO_FILE;
+                if (ambientEl) ambientEl.src = videoEl.src;
                 startPlayback();
             }
         });
 
-        let hasSought = false;
+        let seekConfirmed = false;
         function applyStartTime() {
-            if (!hasSought && START_TIME > 0 && videoEl.duration && videoEl.duration > 0) {
-                hasSought = true;
-                videoEl.currentTime = Math.min(START_TIME, videoEl.duration - 1);
+            if (START_TIME <= 0 || seekConfirmed) return;
+
+            if (videoEl.readyState >= 1) { // HAVE_METADATA or higher
+                if (videoEl.currentTime >= START_TIME - 0.5) {
+                    seekConfirmed = true;
+                    console.log(`[Stream Player] Start time confirmed at: ${videoEl.currentTime.toFixed(2)}s`);
+                    return;
+                }
+
+                try {
+                    console.log(`[Stream Player] Applying start time: ${START_TIME}s (current: ${videoEl.currentTime.toFixed(2)}s)`);
+                    videoEl.currentTime = START_TIME;
+                } catch (e) {
+                    console.warn('[Stream Player] Seek notice:', e);
+                }
             }
         }
 
-        videoEl.addEventListener('loadedmetadata', applyStartTime);
-        videoEl.addEventListener('canplay', applyStartTime);
+        ['loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing'].forEach(ev => {
+            videoEl.addEventListener(ev, applyStartTime);
+        });
+
+        // Timeupdate safety lock: if video starts playing from 0:00, jump immediately to START_TIME
+        videoEl.addEventListener('timeupdate', () => {
+            if (!seekConfirmed && START_TIME > 0) {
+                if (videoEl.currentTime < START_TIME - 0.5) {
+                    videoEl.currentTime = START_TIME;
+                } else {
+                    seekConfirmed = true;
+                    console.log(`[Stream Player] Seek verified on playback: ${videoEl.currentTime.toFixed(2)}s`);
+                }
+            }
+        });
 
         // Instant autonomous playback
         function startPlayback() {
             applyStartTime();
+            if (ambientEl && ambientEl.paused) ambientEl.play().catch(() => { });
             const playPromise = videoEl.play();
             if (playPromise !== undefined) {
                 playPromise.catch(err => {
@@ -492,6 +587,7 @@
         // Auto-loop when video reaches the end (restarts at START_TIME)
         videoEl.addEventListener('ended', () => {
             try {
+                seekConfirmed = false;
                 videoEl.currentTime = START_TIME > 0 ? START_TIME : 0;
                 videoEl.play();
             } catch (e) { }
@@ -611,7 +707,7 @@
             }, 6000);
         }
 
-        const EMOJIS = ['❤️', '💖', '🔥', '👍', '✨', '⚡'];
+        const EMOJIS = ['❤️', '💖', '🔥', '👍', '❤️', '❤️'];
         function spawnReaction() {
             if (!reactionBox) return;
             const el = document.createElement('div');
@@ -620,7 +716,7 @@
             el.style.left = `${Math.floor(Math.random() * 50)}px`;
             el.style.fontSize = `${Math.floor(Math.random() * 14 + 22)}px`;
             reactionBox.appendChild(el);
-            setTimeout(() => el.remove(), 3500);
+            setTimeout(() => el.remove(), 1500);
         }
 
         function spawnReactionBurst() {
