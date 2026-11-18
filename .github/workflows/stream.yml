@@ -65,6 +65,7 @@ jobs:
             fi
             echo "Download completed. File details:"
             ls -lh video.mp4 || true
+            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 video.mp4 || true
           elif [ -f "$TARGET_FILE" ] && [ "$TARGET_FILE" != "video.mp4" ]; then
             cp "$TARGET_FILE" video.mp4
           fi
@@ -125,14 +126,20 @@ jobs:
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
           $BROWSER \
             --no-sandbox \
-            --disable-gpu \
+            --disable-dev-shm-usage \
+            --use-gl=angle \
+            --use-angle=swiftshader \
+            --enable-features=VaapiVideoDecoder,CanvasOopRasterization \
+            --enable-gpu-rasterization \
+            --enable-zero-copy \
+            --disable-gpu-vsync \
             --kiosk \
             --hide-scrollbars \
             --window-size=1080,1920 \
             --window-position=0,0 \
             --allow-file-access-from-files \
             --autoplay-policy=no-user-gesture-required \
-            --disable-features=AutoplayIgnoreWebAudio \
+            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints \
             --enable-audio-focus-enforcement=false \
             --use-fake-ui-for-media-stream \
             --enable-speech-dispatcher \
@@ -147,21 +154,20 @@ jobs:
             "$TARGET_URL" &
           sleep 8
 
-      # ── Stream to YouTube Live (Fluid 1080p 9:16 Vertical Shorts Broadcast) ─
-      # (Note: Using 30 FPS with ultrafast preset ensures zero dropped frames
-      #  and leaves plenty of CPU for Chromium, eliminating all lag)
+      # ── Stream to YouTube Live (Fluid 1080p 9:16 Zero-Lag Broadcast) ─
       - name: Stream 5 hours to YouTube
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
-          timeout 18000 ffmpeg -re \
+          timeout 18000 ffmpeg \
             -thread_queue_size 1024 -f x11grab -draw_mouse 0 \
-            -video_size 1080x1920 -framerate 30 -i :99.0 \
+            -video_size 1080x1920 -framerate 30 -probesize 32 -analyzeduration 0 -i :99.0 \
             -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
             -c:v libx264 -preset ultrafast \
-              -b:v 6500k -maxrate 7500k -bufsize 14000k \
-              -pix_fmt yuv420p -g 60 -tune zerolatency \
+              -b:v 4000k -maxrate 4500k -bufsize 8000k \
+              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
-            -threads 2 \
+            -threads 0 \
+            -flvflags no_duration_filesize \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY" || true
