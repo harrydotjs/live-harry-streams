@@ -8,9 +8,9 @@ on:
         required: false
         default: 'https://archive.org/download/video_20261118/video.mp4'
       start_time:
-        description: 'Start time (e.g. 90, 1:30, or 2m15s). Leave empty to start from 0'
+        description: 'Start time (e.g. 50:00, 1:30, or 90). Leave empty to start from 0'
         required: false
-        default: ''
+        default: '50:00'
   schedule:
     # 2 segments × 5 hours = 10 hours/day (IST = UTC+5:30)
     - cron: '30 6 * * *'   # Segment 1: 12:00 PM IST → 5:00 PM IST
@@ -22,25 +22,23 @@ jobs:
     timeout-minutes: 310   # 5 hrs + 10 min buffer for setup
 
     steps:
-      - name: Checkout HTML files
+      - name: Checkout repository files
         uses: actions/checkout@v4
 
-      # ── Install all multimedia & audio packages ───────────────────────
-      - name: Install FFmpeg, Xvfb, Chromium/Chrome, PulseAudio, TTS, unclutter
+      # ── Install native multimedia packages ───────────────────────────
+      - name: Install FFmpeg, Python, Fonts
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg xvfb \
-            pulseaudio pulseaudio-utils python3-pip \
-            espeak-ng speech-dispatcher speech-dispatcher-espeak-ng \
-            unclutter
+          sudo apt-get install -y ffmpeg python3-pip fonts-dejavu-core
 
-      # ── Generate Ultra-HD Studio Announcer Audio ─────────────────────
-      - name: Generate Natural Broadcast Announcer Audio
+      # ── Generate Broadcaster Voices & Announcements Loop ─────────────
+      - name: Generate Natural Broadcast Announcer Audio & Overlay
         run: |
-          pip install --upgrade edge-tts
+          pip install --upgrade edge-tts pillow
           python3 generate_voices.py
+          python3 generate_overlay.py overlay.png
 
-      # ── Fetch Video (Downloads large 2GB+ video from Google Drive/URL) ─
+      # ── Fetch Video (Direct Download from Archive.org / Drive / Dropbox) ─
       - name: Fetch Video File
         run: |
           TARGET_FILE="${{ github.event.inputs.video_file || secrets.VIDEO_FILE || 'https://archive.org/download/video_20261118/video.mp4' }}"
@@ -65,109 +63,64 @@ jobs:
             fi
             echo "Download completed. File details:"
             ls -lh video.mp4 || true
-            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 video.mp4 || true
           elif [ -f "$TARGET_FILE" ] && [ "$TARGET_FILE" != "video.mp4" ]; then
             cp "$TARGET_FILE" video.mp4
           fi
 
-      # ── Start Local Web Server with Range Seeking Support ────────────
-      - name: Start Local HTTP Server
-        run: |
-          python3 server.py &
-          sleep 2
+          # Verify video file integrity
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 video.mp4 || true
 
-      # ── Start PulseAudio Virtual Sink (captures all game audio) ───────
-      - name: Start PulseAudio with virtual sink
+      # ── Prepare Stream Source (Start Time Seeking & Audio Validation) ─
+      - name: Prepare Stream Source
         run: |
-          export XDG_RUNTIME_DIR=/tmp/pulse-runtime
-          mkdir -p "$XDG_RUNTIME_DIR"
-          chmod 700 "$XDG_RUNTIME_DIR"
-          pulseaudio --daemonize=no --exit-idle-time=-1 \
-            --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulseaudio.socket" \
-            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" &
-          sleep 2
-          pactl --server=unix:/tmp/pulseaudio.socket set-default-sink virtual_out
-          echo "PULSE_SERVER=unix:/tmp/pulseaudio.socket" >> $GITHUB_ENV
-          echo "XDG_RUNTIME_DIR=/tmp/pulse-runtime" >> $GITHUB_ENV
+          V_START=$(echo "${{ github.event.inputs.start_time || secrets.START_TIME || '50:00' }}" | tr -d '[:space:]')
+          echo "Requested start time: '$V_START'"
 
-      # ── Speech Dispatcher (TTS voices) ────────────────────────────────
-      - name: Configure and start Speech Dispatcher
-        run: |
-          mkdir -p ~/.config/speech-dispatcher
-          cat > ~/.config/speech-dispatcher/speechd.conf << 'EOF'
-          DefaultModule espeak-ng
-          DefaultLanguage en
-          DefaultVoiceType MALE1
-          AudioOutputMethod pulse
-          AudioPulseServer unix:/tmp/pulseaudio.socket
-          EOF
-          speech-dispatcher -d
-          sleep 2
-
-      # ── Xvfb Virtual Screen (1080×1920 60Hz Vertical 9:16 Shorts) ────
-      - name: Start Xvfb vertical 9:16 screen
-        run: |
-          Xvfb :99 -screen 0 1080x1920x24 &
-          sleep 2
-          DISPLAY=:99 unclutter -idle 0 -root &
-
-      # ── Launch Chromium with audio & high graphics enabled ───────────
-      - name: Launch Browser in kiosk mode
-        run: |
-          BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
-          echo "Launching browser: $BROWSER"
-          V_START=$(echo "${{ github.event.inputs.start_time || secrets.START_TIME || '' }}" | tr -d '[:space:]')
-          TARGET_URL="http://127.0.0.1:8080/index.html?v=video.mp4"
-          if [ -n "$V_START" ]; then
-            ENCODED_START=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$V_START")
-            TARGET_URL="${TARGET_URL}&t=${ENCODED_START}&start=${ENCODED_START}"
+          if [ -n "$V_START" ] && [ "$V_START" != "0" ] && [ "$V_START" != "00:00" ]; then
+            echo "Fast-seeking and trimming source to start from $V_START..."
+            ffmpeg -y -ss "$V_START" -i video.mp4 -c copy stream_source.mp4 || cp video.mp4 stream_source.mp4
+          else
+            echo "Streaming from beginning (0:00)..."
+            cp video.mp4 stream_source.mp4
           fi
-          echo "Opening stream page: $TARGET_URL"
-          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
-          $BROWSER \
-            --no-sandbox \
-            --disable-dev-shm-usage \
-            --use-gl=angle \
-            --use-angle=swiftshader \
-            --enable-features=VaapiVideoDecoder,CanvasOopRasterization \
-            --enable-gpu-rasterization \
-            --enable-zero-copy \
-            --disable-gpu-vsync \
-            --kiosk \
-            --hide-scrollbars \
-            --window-size=1080,1920 \
-            --window-position=0,0 \
-            --allow-file-access-from-files \
-            --autoplay-policy=no-user-gesture-required \
-            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints \
-            --enable-audio-focus-enforcement=false \
-            --use-fake-ui-for-media-stream \
-            --enable-speech-dispatcher \
-            --enable-features=SpeechDispatcher \
-            --no-first-run \
-            --disable-translate \
-            --disable-infobars \
-            --disable-notifications \
-            --disable-background-timer-throttling \
-            --disable-renderer-backgrounding \
-            --disable-backgrounding-occluded-windows \
-            "$TARGET_URL" &
-          sleep 8
 
-      # ── Stream to YouTube Live (Fluid 1080p 9:16 Zero-Lag Broadcast) ─
+          # Verify audio stream exists; if video has no audio, add silent stereo track
+          HAS_AUDIO=$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 stream_source.mp4 || true)
+          if [ -z "$HAS_AUDIO" ]; then
+            echo "No audio stream detected in video, adding silent track..."
+            ffmpeg -y -i stream_source.mp4 -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v copy -c:a aac -shortest stream_source_fixed.mp4
+            mv stream_source_fixed.mp4 stream_source.mp4
+          fi
+
+          # Ensure announcement loop audio exists
+          if [ ! -f announcements_loop.mp3 ]; then
+            echo "Generating fallback announcement audio..."
+            ffmpeg -y -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 300 announcements_loop.mp3
+          fi
+
+          echo "Source preparation complete. Ready for broadcast!"
+          ls -lh stream_source.mp4 overlay.png announcements_loop.mp3
+
+      # ── Stream to YouTube Live (Pure C-Native Broadcast - ZERO LAG) ───
       - name: Stream 5 hours to YouTube
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
-          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
+          echo "Starting 1080x1920 YouTube Shorts live broadcast..."
           timeout 18000 ffmpeg \
-            -thread_queue_size 1024 -f x11grab -draw_mouse 0 \
-            -video_size 1080x1920 -framerate 30 -probesize 32 -analyzeduration 0 -i :99.0 \
-            -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
+            -re \
+            -stream_loop -1 -i stream_source.mp4 \
+            -loop 1 -i overlay.png \
+            -stream_loop -1 -i announcements_loop.mp3 \
+            -filter_complex "\
+              [0:v]crop='min(in_w,in_h)':'min(in_w,in_h)':(in_w-min(in_w,in_h))/2:(in_h-min(in_w,in_h))/2,scale=1080:1080,pad=1080:1920:0:420:black[vbase]; \
+              [vbase][1:v]overlay=0:0:shortest=1[vout]; \
+              [0:a][2:a]amix=inputs=2:duration=first:dropout_transition=2:weights=1.0 1.2[aout]" \
+            -map "[vout]" -map "[aout]" \
             -c:v libx264 -preset ultrafast \
               -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 14000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
-            -threads 0 \
+            -threads 2 \
             -flvflags no_duration_filesize \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY" || true
