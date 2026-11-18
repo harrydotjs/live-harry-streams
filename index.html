@@ -40,41 +40,19 @@
             justify-content: center;
             overflow: hidden;
             background: #05070d;
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+            transform: translateZ(0);
         }
 
-        /* Ambient blurred background lighting filling top/bottom margins */
+        /* Ambient Studio Backdrop (Zero CPU usage, smooth 60FPS) */
         #ambient-glow {
             position: absolute;
-            inset: -30px;
-            z-index: 1;
-            overflow: hidden;
-            filter: blur(45px) brightness(0.38);
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        #ambient-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border: none;
-        }
-
-        /* Top & Bottom Cinematic Gradient Mask over Ambient Glow */
-        #stream-container::after {
-            content: '';
-            position: absolute;
             inset: 0;
-            background: linear-gradient(to bottom,
-                    rgba(5, 7, 13, 0.9) 0%,
-                    rgba(5, 7, 13, 0.25) 20%,
-                    transparent 35%,
-                    transparent 65%,
-                    rgba(5, 7, 13, 0.35) 80%,
-                    rgba(5, 7, 13, 0.96) 100%);
-            z-index: 2;
+            z-index: 1;
+            background: radial-gradient(circle at 50% 18%, rgba(255, 0, 80, 0.22) 0%, transparent 60%),
+                        radial-gradient(circle at 50% 82%, rgba(0, 150, 255, 0.2) 0%, transparent 60%),
+                        linear-gradient(to bottom, #090c16 0%, #04050a 50%, #090c16 100%);
             pointer-events: none;
+            transform: translateZ(0);
         }
 
         /* Video Stage: Centers the 1:1 Square Video vertically */
@@ -101,9 +79,11 @@
             justify-content: center;
             overflow: hidden;
             background: #000;
-            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.95), 0 0 45px rgba(255, 0, 80, 0.22);
-            border-top: 2px solid rgba(255, 255, 255, 0.12);
-            border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+            border-top: 3px solid rgba(255, 60, 110, 0.4);
+            border-bottom: 3px solid rgba(0, 150, 255, 0.4);
+            box-shadow: 0 10px 0 rgba(0, 0, 0, 0.8);
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         /* Direct HTML5 Video Player inside 1:1 Frame */
@@ -118,7 +98,9 @@
             border: none;
             outline: none;
             pointer-events: none !important;
-            /* Hides all mouse/control interaction */
+            transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
         }
 
         .fit-contain #stream-video {
@@ -167,8 +149,10 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 0 20px rgba(255, 0, 68, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
             text-transform: uppercase;
+            transform: translateZ(0);
         }
 
         .live-tag::before {
@@ -196,9 +180,8 @@
 
         /* Main Call to Action Pill */
         .cta-pill {
-            background: rgba(10, 16, 32, 0.85);
-            backdrop-filter: blur(14px);
-            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            background: rgba(14, 18, 32, 0.96);
+            border: 2px solid #ff3366;
             border-radius: 50px;
             padding: 10px 24px;
             display: flex;
@@ -208,20 +191,23 @@
             font-weight: 800;
             letter-spacing: 0.8px;
             color: #fff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 75, 110, 0.3);
-            animation: border-glow 3s infinite alternate;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         .cta-pill .heart {
             color: #ff3366;
             font-size: 17px;
             animation: heart-beat 1.4s infinite ease-in-out;
+            transform: translateZ(0);
         }
 
         .cta-pill .bell {
             color: #ffcc00;
             font-size: 16px;
             animation: bell-ring 2.5s infinite ease-in-out;
+            transform: translateZ(0);
         }
 
         @keyframes heart-beat {
@@ -272,18 +258,6 @@
             }
         }
 
-        @keyframes border-glow {
-            0% {
-                border-color: rgba(255, 255, 255, 0.2);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 51, 102, 0.3);
-            }
-
-            100% {
-                border-color: rgba(255, 60, 110, 0.85);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 35px rgba(255, 51, 102, 0.7);
-            }
-        }
-
         /* Floating Reaction Emojis */
         .reaction-container {
             position: absolute;
@@ -301,18 +275,20 @@
             font-size: 26px;
             animation: float-up 3.5s ease-out forwards;
             opacity: 0;
-            filter: drop-shadow(0 2px 10px rgba(255, 0, 80, 0.7));
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            transform: translateZ(0);
+            will-change: transform, opacity;
         }
 
         @keyframes float-up {
             0% {
-                transform: translateY(0) scale(0.6) rotate(0deg);
+                transform: translate3d(0, 0, 0) scale(0.6) rotate(0deg);
                 opacity: 0;
             }
 
             15% {
                 opacity: 1;
-                transform: translateY(-40px) scale(1.1) rotate(-8deg);
+                transform: translate3d(0, -40px, 0) scale(1.1) rotate(-8deg);
             }
 
             80% {
@@ -320,7 +296,7 @@
             }
 
             100% {
-                transform: translateY(-320px) scale(1.3) rotate(20deg);
+                transform: translate3d(0, -320px, 0) scale(1.3) rotate(20deg);
                 opacity: 0;
             }
         }
@@ -335,16 +311,16 @@
         }
 
         .engagement-card {
-            background: linear-gradient(135deg, rgba(18, 22, 38, 0.92), rgba(9, 12, 22, 0.94));
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(14, 18, 34, 0.96);
+            border: 1.5px solid rgba(255, 60, 110, 0.6);
             border-radius: 18px;
             padding: 12px 28px;
             display: flex;
             align-items: center;
             gap: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 51, 102, 0.25);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.7);
+            transform: translateZ(0);
+            transition: transform 0.3s ease;
         }
 
         .engagement-card.highlight {
@@ -356,12 +332,10 @@
             0%,
             100% {
                 transform: scale(1);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 45, 95, 0.4);
             }
 
             50% {
                 transform: scale(1.03);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 45px rgba(255, 45, 95, 0.85);
             }
         }
 
@@ -407,9 +381,7 @@
 <body>
     <div id="stream-container">
         <!-- Ambient background for vertical feed -->
-        <div id="ambient-glow">
-            <video id="ambient-video" playsinline autoplay loop muted preload="auto"></video>
-        </div>
+        <div id="ambient-glow"></div>
 
         <!-- Video Stage (Centers the 1:1 Square Video) -->
         <div id="video-stage">
@@ -496,7 +468,6 @@
         // 2. DIRECT HTML5 VIDEO PLAYER (ZERO CONTROLS, AUTONOMOUS AUTO-LOOP)
         // ═══════════════════════════════════════════════════════════════
         const videoEl = document.getElementById('stream-video');
-        const ambientEl = document.getElementById('ambient-video');
 
         // Apply HTML5 Media Fragment directly so browser buffers from START_TIME from the very first byte
         if (START_TIME > 0 && !VIDEO_SRC.includes('#t=')) {
@@ -505,51 +476,57 @@
             videoEl.src = VIDEO_SRC;
         }
 
-        if (ambientEl) {
-            ambientEl.src = videoEl.src;
-            ambientEl.muted = true;
-        }
-
         // Auto fallback: if local file is missing, stream directly from archive.org
         videoEl.addEventListener('error', () => {
             if (!videoEl.src.includes('archive.org')) {
                 console.warn('[Stream Player] Local video not found, streaming from archive.org:', DEFAULT_VIDEO_FILE);
                 VIDEO_SRC = DEFAULT_VIDEO_FILE;
                 videoEl.src = START_TIME > 0 ? `${DEFAULT_VIDEO_FILE}#t=${START_TIME}` : DEFAULT_VIDEO_FILE;
-                if (ambientEl) ambientEl.src = videoEl.src;
                 startPlayback();
             }
         });
 
         let seekConfirmed = false;
+        let isSeeking = false;
+
         function applyStartTime() {
-            if (START_TIME <= 0 || seekConfirmed) return;
+            if (START_TIME <= 0 || seekConfirmed || isSeeking) return;
 
             if (videoEl.readyState >= 1) { // HAVE_METADATA or higher
-                if (videoEl.currentTime >= START_TIME - 0.5) {
+                if (videoEl.currentTime >= START_TIME - 1.0) {
                     seekConfirmed = true;
                     console.log(`[Stream Player] Start time confirmed at: ${videoEl.currentTime.toFixed(2)}s`);
                     return;
                 }
 
                 try {
+                    isSeeking = true;
                     console.log(`[Stream Player] Applying start time: ${START_TIME}s (current: ${videoEl.currentTime.toFixed(2)}s)`);
                     videoEl.currentTime = START_TIME;
                 } catch (e) {
+                    isSeeking = false;
                     console.warn('[Stream Player] Seek notice:', e);
                 }
             }
         }
 
-        ['loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing'].forEach(ev => {
+        videoEl.addEventListener('seeked', () => {
+            isSeeking = false;
+            if (videoEl.currentTime >= START_TIME - 1.0) {
+                seekConfirmed = true;
+                console.log(`[Stream Player] Seek completed at: ${videoEl.currentTime.toFixed(2)}s`);
+            }
+        });
+
+        ['loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough'].forEach(ev => {
             videoEl.addEventListener(ev, applyStartTime);
         });
 
-        // Timeupdate safety lock: if video starts playing from 0:00, jump immediately to START_TIME
+        // Timeupdate safety lock: if video plays before seek takes effect, ensure it jumps to START_TIME once
         videoEl.addEventListener('timeupdate', () => {
-            if (!seekConfirmed && START_TIME > 0) {
-                if (videoEl.currentTime < START_TIME - 0.5) {
-                    videoEl.currentTime = START_TIME;
+            if (!seekConfirmed && START_TIME > 0 && !isSeeking && !videoEl.seeking) {
+                if (videoEl.currentTime < START_TIME - 1.0) {
+                    applyStartTime();
                 } else {
                     seekConfirmed = true;
                     console.log(`[Stream Player] Seek verified on playback: ${videoEl.currentTime.toFixed(2)}s`);
@@ -560,7 +537,6 @@
         // Instant autonomous playback
         function startPlayback() {
             applyStartTime();
-            if (ambientEl && ambientEl.paused) ambientEl.play().catch(() => { });
             const playPromise = videoEl.play();
             if (playPromise !== undefined) {
                 playPromise.catch(err => {
