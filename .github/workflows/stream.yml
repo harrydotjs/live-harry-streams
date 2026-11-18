@@ -21,9 +21,21 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg xvfb \
-            pulseaudio pulseaudio-utils \
+            pulseaudio pulseaudio-utils python3-pip \
             espeak-ng speech-dispatcher speech-dispatcher-espeak-ng \
             unclutter
+
+      # ── Generate Ultra-HD Studio Announcer Audio ─────────────────────
+      - name: Generate Natural Broadcast Announcer Audio
+        run: |
+          pip install --upgrade edge-tts
+          python3 generate_voices.py
+
+      # ── Start Local Web Server (serves audio clips & game flawlessly) ─
+      - name: Start Local HTTP Server
+        run: |
+          python3 -m http.server 8080 --directory "$GITHUB_WORKSPACE" &
+          sleep 2
 
       # ── Start PulseAudio Virtual Sink (captures all game audio) ───────
       - name: Start PulseAudio with virtual sink
@@ -87,7 +99,7 @@ jobs:
             --disable-background-timer-throttling \
             --disable-renderer-backgrounding \
             --disable-backgrounding-occluded-windows \
-            "file://$GITHUB_WORKSPACE/index.html?quality=1.5" &
+            "http://127.0.0.1:8080/index.html?quality=1.5" &
           sleep 8
 
       # ── Stream to YouTube Live (Pristine 1080p 60FPS / 9500kbps) ─────
