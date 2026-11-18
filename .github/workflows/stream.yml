@@ -69,10 +69,10 @@ jobs:
             cp "$TARGET_FILE" video.mp4
           fi
 
-      # ── Start Local Web Server (serves audio clips & video flawlessly) ─
+      # ── Start Local Web Server with Range Seeking Support ────────────
       - name: Start Local HTTP Server
         run: |
-          python3 -m http.server 8080 --directory "$GITHUB_WORKSPACE" &
+          python3 server.py &
           sleep 2
 
       # ── Start PulseAudio Virtual Sink (captures all game audio) ───────
@@ -103,10 +103,10 @@ jobs:
           speech-dispatcher -d
           sleep 2
 
-      # ── Xvfb Virtual Screen (1920×1080 60Hz Horizontal 16:9) ─────────
-      - name: Start Xvfb horizontal 16:9 screen
+      # ── Xvfb Virtual Screen (1080×1920 60Hz Vertical 9:16 Shorts) ────
+      - name: Start Xvfb vertical 9:16 screen
         run: |
-          Xvfb :99 -screen 0 1920x1080x24 &
+          Xvfb :99 -screen 0 1080x1920x24 &
           sleep 2
           DISPLAY=:99 unclutter -idle 0 -root &
 
@@ -115,11 +115,11 @@ jobs:
         run: |
           BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
           echo "Launching browser: $BROWSER"
-          V_START="${{ github.event.inputs.start_time || secrets.START_TIME || '' }}"
+          V_START=$(echo "${{ github.event.inputs.start_time || secrets.START_TIME || '' }}" | tr -d '[:space:]')
           TARGET_URL="http://127.0.0.1:8080/index.html?v=video.mp4"
           if [ -n "$V_START" ]; then
             ENCODED_START=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$V_START")
-            TARGET_URL="${TARGET_URL}&t=$ENCODED_START"
+            TARGET_URL="${TARGET_URL}&t=${ENCODED_START}&start=${ENCODED_START}"
           fi
           echo "Opening stream page: $TARGET_URL"
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
@@ -128,7 +128,7 @@ jobs:
             --disable-gpu \
             --kiosk \
             --hide-scrollbars \
-            --window-size=1920,1080 \
+            --window-size=1080,1920 \
             --window-position=0,0 \
             --allow-file-access-from-files \
             --autoplay-policy=no-user-gesture-required \
@@ -147,8 +147,8 @@ jobs:
             "$TARGET_URL" &
           sleep 8
 
-      # ── Stream to YouTube Live (Fluid 1080p 16:9 Broadcast) ───────────
-      # (30 FPS with ultrafast preset ensures zero dropped frames
+      # ── Stream to YouTube Live (Fluid 1080p 9:16 Vertical Shorts Broadcast) ─
+      # (Note: Using 30 FPS with ultrafast preset ensures zero dropped frames
       #  and leaves plenty of CPU for Chromium, eliminating all lag)
       - name: Stream 5 hours to YouTube
         env:
@@ -157,10 +157,10 @@ jobs:
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
           timeout 18000 ffmpeg -re \
             -thread_queue_size 1024 -f x11grab -draw_mouse 0 \
-            -video_size 1920x1080 -framerate 30 -i :99.0 \
+            -video_size 1080x1920 -framerate 30 -i :99.0 \
             -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
             -c:v libx264 -preset ultrafast \
-              -b:v 6000k -maxrate 6500k -bufsize 12000k \
+              -b:v 6500k -maxrate 7500k -bufsize 14000k \
               -pix_fmt yuv420p -g 60 -tune zerolatency \
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
             -threads 2 \
