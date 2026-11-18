@@ -165,7 +165,7 @@ jobs:
             -video_size 1080x1920 -framerate 30 -probesize 32 -analyzeduration 0 -i :99.0 \
             -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
             -c:v libx264 -preset ultrafast \
-              -b:v 4000k -maxrate 4500k -bufsize 8000k \
+              -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 14000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
             -threads 0 \
