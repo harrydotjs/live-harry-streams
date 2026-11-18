@@ -32,7 +32,8 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 177.78vh; /* 16/9 aspect ratio */
+            max-width: 177.78vh;
+            /* 16/9 aspect ratio */
             max-height: 56.25vw;
             aspect-ratio: 16 / 9;
             display: flex;
@@ -63,11 +64,13 @@
             inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Preserves video aspect ratio cleanly */
+            object-fit: contain;
+            /* Preserves video aspect ratio cleanly */
             background: #000;
             border: none;
             outline: none;
-            pointer-events: none !important; /* Hides all mouse/control interaction */
+            pointer-events: none !important;
+            /* Hides all mouse/control interaction */
         }
 
         .fit-cover #stream-video {
@@ -129,10 +132,13 @@
         }
 
         @keyframes pulse-dot {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
                 transform: scale(1);
             }
+
             50% {
                 opacity: 0.3;
                 transform: scale(0.7);
@@ -170,19 +176,51 @@
         }
 
         @keyframes heart-beat {
-            0%, 100% { transform: scale(1); }
-            15% { transform: scale(1.3); }
-            30% { transform: scale(1); }
-            45% { transform: scale(1.2); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            15% {
+                transform: scale(1.3);
+            }
+
+            30% {
+                transform: scale(1);
+            }
+
+            45% {
+                transform: scale(1.2);
+            }
         }
 
         @keyframes bell-ring {
-            0%, 100% { transform: rotate(0deg); }
-            10% { transform: rotate(16deg); }
-            20% { transform: rotate(-16deg); }
-            30% { transform: rotate(12deg); }
-            40% { transform: rotate(-12deg); }
-            50% { transform: rotate(0deg); }
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            10% {
+                transform: rotate(16deg);
+            }
+
+            20% {
+                transform: rotate(-16deg);
+            }
+
+            30% {
+                transform: rotate(12deg);
+            }
+
+            40% {
+                transform: rotate(-12deg);
+            }
+
+            50% {
+                transform: rotate(0deg);
+            }
         }
 
         @keyframes border-glow {
@@ -190,6 +228,7 @@
                 border-color: rgba(255, 255, 255, 0.2);
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 51, 102, 0.3);
             }
+
             100% {
                 border-color: rgba(255, 60, 110, 0.85);
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 35px rgba(255, 51, 102, 0.7);
@@ -221,13 +260,16 @@
                 transform: translateY(0) scale(0.6) rotate(0deg);
                 opacity: 0;
             }
+
             15% {
                 opacity: 1;
                 transform: translateY(-40px) scale(1.1) rotate(-8deg);
             }
+
             80% {
                 opacity: 0.9;
             }
+
             100% {
                 transform: translateY(-320px) scale(1.3) rotate(20deg);
                 opacity: 0;
@@ -261,10 +303,13 @@
         }
 
         @keyframes highlight-pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 45, 95, 0.4);
             }
+
             50% {
                 transform: scale(1.03);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 45px rgba(255, 45, 95, 0.85);
@@ -314,11 +359,7 @@
     <div id="stream-container">
         <!-- Video Stage (Direct HTML5 Video) -->
         <div id="video-stage">
-            <video id="stream-video"
-                playsinline
-                autoplay
-                loop
-                preload="auto">
+            <video id="stream-video" playsinline autoplay loop preload="auto">
             </video>
             <!-- Click shield prevents player controls & interaction -->
             <div id="shield"></div>
@@ -341,7 +382,7 @@
             <div class="reaction-container" id="reactionBox"></div>
 
             <!-- Bottom Engagement Banner -->
-            
+
         </div>
     </div>
 
@@ -351,9 +392,8 @@
         // ═══════════════════════════════════════════════════════════════
         // 1. CONFIGURATION (DEFAULT VIDEO FILE + START TIME)
         // ═══════════════════════════════════════════════════════════════
-        // Place your video file (e.g. video.mp4) in the repository root directory!
-        // You can also pass custom video via URL: ?v=video.mp4 or ?v=my_video.mp4
-        const DEFAULT_VIDEO_FILE = 'video.mp4';
+        // Direct video link from Archive.org or local file
+        const DEFAULT_VIDEO_FILE = 'https://archive.org/download/video_20261118/video.mp4';
 
         // Default starting timestamp: in seconds or mm:ss format (e.g. 0, 90, '1:30', '3:00')
         const DEFAULT_START_TIME = '0:00';
@@ -384,7 +424,7 @@
         }
 
         const params = new URLSearchParams(window.location.search);
-        const VIDEO_SRC = params.get('v') || params.get('video') || params.get('src') || DEFAULT_VIDEO_FILE;
+        let VIDEO_SRC = params.get('v') || params.get('video') || params.get('src') || DEFAULT_VIDEO_FILE;
         const rawTime = params.get('t') || params.get('start') || DEFAULT_START_TIME;
         const START_TIME = parseTimeToSeconds(rawTime);
         const FIT_MODE = params.get('fit') || 'contain'; // 'contain' or 'cover'
@@ -401,6 +441,16 @@
         // ═══════════════════════════════════════════════════════════════
         const videoEl = document.getElementById('stream-video');
         videoEl.src = VIDEO_SRC;
+
+        // Auto fallback: if local file is missing, stream directly from archive.org
+        videoEl.addEventListener('error', () => {
+            if (VIDEO_SRC !== DEFAULT_VIDEO_FILE) {
+                console.warn('[Stream Player] Local video not found, streaming from archive.org:', DEFAULT_VIDEO_FILE);
+                VIDEO_SRC = DEFAULT_VIDEO_FILE;
+                videoEl.src = DEFAULT_VIDEO_FILE;
+                startPlayback();
+            }
+        });
 
         let hasSought = false;
         function applyStartTime() {
@@ -421,7 +471,7 @@
                 playPromise.catch(err => {
                     console.warn('[Stream Player] Autoplay with audio restricted, resuming muted first:', err);
                     videoEl.muted = true;
-                    videoEl.play().catch(() => {});
+                    videoEl.play().catch(() => { });
                 });
             }
         }
