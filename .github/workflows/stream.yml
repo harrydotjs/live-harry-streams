@@ -6,7 +6,7 @@ on:
       video_file:
         description: 'Uploaded video file name or direct URL (e.g. video.mp4)'
         required: false
-        default: 'video.mp4'
+        default: 'https://archive.org/download/video_20261118/video.mp4'
       start_time:
         description: 'Start time (e.g. 90, 1:30, or 2m15s). Leave empty to start from 0'
         required: false
@@ -40,7 +40,36 @@ jobs:
           pip install --upgrade edge-tts
           python3 generate_voices.py
 
-      # ── Start Local Web Server (serves audio clips & game flawlessly) ─
+      # ── Fetch Video (Downloads large 2GB+ video from Google Drive/URL) ─
+      - name: Fetch Video File
+        run: |
+          TARGET_FILE="${{ github.event.inputs.video_file || secrets.VIDEO_FILE || 'https://archive.org/download/video_20261118/video.mp4' }}"
+          echo "Target video: $TARGET_FILE"
+
+          if [[ "$TARGET_FILE" =~ ^https?:// ]]; then
+            echo "Detected remote video URL: $TARGET_FILE"
+            if [[ "$TARGET_FILE" =~ drive\.google\.com ]]; then
+              echo "Downloading from Google Drive via gdown..."
+              pip install --upgrade gdown
+              gdown --fuzzy "$TARGET_FILE" -O video.mp4
+            elif [[ "$TARGET_FILE" =~ dropbox\.com ]]; then
+              echo "Downloading from Dropbox..."
+              DL_URL=$(echo "$TARGET_FILE" | sed 's/[?&]dl=0/?dl=1/')
+              if [[ ! "$DL_URL" =~ dl=1 ]]; then
+                DL_URL="${DL_URL}?dl=1"
+              fi
+              curl -L --retry 5 -o video.mp4 "$DL_URL"
+            else
+              echo "Downloading direct file via curl..."
+              curl -L -C - --retry 5 -o video.mp4 "$TARGET_FILE"
+            fi
+            echo "Download completed. File details:"
+            ls -lh video.mp4 || true
+          elif [ -f "$TARGET_FILE" ] && [ "$TARGET_FILE" != "video.mp4" ]; then
+            cp "$TARGET_FILE" video.mp4
+          fi
+
+      # ── Start Local Web Server (serves audio clips & video flawlessly) ─
       - name: Start Local HTTP Server
         run: |
           python3 -m http.server 8080 --directory "$GITHUB_WORKSPACE" &
@@ -86,24 +115,11 @@ jobs:
         run: |
           BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
           echo "Launching browser: $BROWSER"
-          V_FILE="${{ github.event.inputs.video_file || secrets.VIDEO_FILE || 'video.mp4' }}"
           V_START="${{ github.event.inputs.start_time || secrets.START_TIME || '' }}"
-          TARGET_URL="http://127.0.0.1:8080/index.html"
-          QUERY=""
-          if [ -n "$V_FILE" ]; then
-            ENCODED_FILE=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$V_FILE")
-            QUERY="v=$ENCODED_FILE"
-          fi
+          TARGET_URL="http://127.0.0.1:8080/index.html?v=video.mp4"
           if [ -n "$V_START" ]; then
             ENCODED_START=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$V_START")
-            if [ -n "$QUERY" ]; then
-              QUERY="${QUERY}&t=$ENCODED_START"
-            else
-              QUERY="t=$ENCODED_START"
-            fi
-          fi
-          if [ -n "$QUERY" ]; then
-            TARGET_URL="http://127.0.0.1:8080/index.html?${QUERY}"
+            TARGET_URL="${TARGET_URL}&t=$ENCODED_START"
           fi
           echo "Opening stream page: $TARGET_URL"
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
