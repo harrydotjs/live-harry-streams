@@ -39,19 +39,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: #05070d;
-            transform: translateZ(0);
-        }
-
-        /* Ambient Studio Backdrop (Zero CPU usage, smooth 60FPS) */
-        #ambient-glow {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            background: radial-gradient(circle at 50% 18%, rgba(255, 0, 80, 0.22) 0%, transparent 60%),
-                        radial-gradient(circle at 50% 82%, rgba(0, 150, 255, 0.2) 0%, transparent 60%),
-                        linear-gradient(to bottom, #090c16 0%, #04050a 50%, #090c16 100%);
-            pointer-events: none;
+            background: #000;
             transform: translateZ(0);
         }
 
@@ -79,9 +67,8 @@
             justify-content: center;
             overflow: hidden;
             background: #000;
-            border-top: 3px solid rgba(255, 60, 110, 0.4);
-            border-bottom: 3px solid rgba(0, 150, 255, 0.4);
-            box-shadow: 0 10px 0 rgba(0, 0, 0, 0.8);
+            border: none;
+            box-shadow: none;
             transform: translateZ(0);
             will-change: transform;
         }
@@ -380,9 +367,6 @@
 
 <body>
     <div id="stream-container">
-        <!-- Ambient background for vertical feed -->
-        <div id="ambient-glow"></div>
-
         <!-- Video Stage (Centers the 1:1 Square Video) -->
         <div id="video-stage">
             <div id="player-wrapper">
