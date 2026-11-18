@@ -42,5 +42,41 @@ async def main():
     await asyncio.gather(*tasks)
     print("Done! All call-to-action voice files are ready in 'audio/' folder.")
 
+    # Assemble into seamless 5-minute repeating loop (1 announcement every 60s)
+    build_announcements_loop()
+
+def build_announcements_loop():
+    import subprocess
+    clips = [f"audio/{key}.mp3" for key, _ in ANNOUNCEMENTS]
+    available = [c for c in clips if os.path.exists(c) and os.path.getsize(c) > 500]
+    if not available:
+        print("[Warning] No voice clips available to compile.")
+        return
+
+    cmd = ["ffmpeg", "-y"]
+    filter_inputs = []
+    for i, clip in enumerate(available):
+        cmd.extend(["-i", clip])
+        delay_ms = (15 + i * 60) * 1000  # 15s, 75s, 135s, 195s, 255s...
+        filter_inputs.append(f"[{i}:a]adelay={delay_ms}|{delay_ms}[a{i}];")
+
+    mix_str = "".join([f"[a{i}]" for i in range(len(available))])
+    total_dur = max(60 * len(available), 300)
+    filter_complex = "".join(filter_inputs) + f"{mix_str}amix=inputs={len(available)}:duration=longest[amix];[amix]apad=whole_dur={total_dur}[aout]"
+
+    cmd.extend([
+        "-filter_complex", filter_complex,
+        "-map", "[aout]",
+        "-c:a", "libmp3lame",
+        "-b:a", "192k",
+        "announcements_loop.mp3"
+    ])
+
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"[OK] Generated repeating announcement loop: announcements_loop.mp3 ({total_dur}s)")
+    except Exception as e:
+        print(f"[Notice] FFmpeg announcement compilation notice: {e}")
+
 if __name__ == "__main__":
     asyncio.run(main())
