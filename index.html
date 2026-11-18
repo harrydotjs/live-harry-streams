@@ -4,8 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>Live Video Stream – 24/7 Broadcast</title>
+    <title>24/7 YouTube Live Video Stream</title>
     <style>
         * {
             box-sizing: border-box;
@@ -20,7 +19,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #030408;
+            background: #000;
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -28,104 +27,54 @@
             justify-content: center;
         }
 
-        /* ── Vertical 9:16 Stream Canvas (YouTube Shorts & Live Native) ── */
+        /* ── Horizontal 16:9 YouTube Broadcast Canvas (1920x1080) ─────── */
         #stream-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 56.25vh;
-            /* 9:16 aspect ratio (9/16 = 56.25vh) maintains phone proportion */
-            aspect-ratio: 9 / 16;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: #05070d;
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
-        }
-
-        /* Ambient blurred background lighting for horizontal videos */
-        #ambient-glow {
-            position: absolute;
-            inset: -20px;
-            background-size: cover;
-            background-position: center;
-            filter: blur(50px) brightness(0.35);
-            opacity: 0.6;
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        /* Top & Bottom Cinematic Gradient Mask over Ambient Glow */
-        #stream-container::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to bottom,
-                    rgba(5, 7, 13, 0.88) 0%,
-                    rgba(5, 7, 13, 0.2) 22%,
-                    transparent 35%,
-                    transparent 65%,
-                    rgba(5, 7, 13, 0.3) 78%,
-                    rgba(5, 7, 13, 0.95) 100%);
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        /* Video Stage: Centers the 1:1 Square Video vertically */
-        #video-stage {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            z-index: 3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        /* ── 1:1 Square Video Frame (YouTube Shorts 1:1 Display) ───────── */
-        #player-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            /* Pure 1:1 Square Ratio */
-            max-height: 100%;
+            max-width: 177.78vh; /* 16/9 aspect ratio */
+            max-height: 56.25vw;
+            aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             background: #000;
-            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.92), 0 0 45px rgba(255, 0, 80, 0.22);
-            border-top: 2px solid rgba(255, 255, 255, 0.12);
-            border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
         }
 
-        /* 1:1 Square Video (Center-cropped 16:9 to fill 1:1 square completely) */
-        #player-wrapper iframe,
-        #player-wrapper #yt-player {
+        /* Video Stage: Holds the direct video player */
+        #video-stage {
             position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 177.78% !important;
-            /* 16/9 * 100% fills 1:1 square with zero letterboxing */
-            height: 100% !important;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            overflow: hidden;
+        }
+
+        /* Direct HTML5 Video Player */
+        #stream-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Preserves video aspect ratio cleanly */
+            background: #000;
             border: none;
-            pointer-events: none !important;
+            outline: none;
+            pointer-events: none !important; /* Hides all mouse/control interaction */
         }
 
-        /* Fit Contain Option: letterboxed within the 1:1 square */
-        .fit-contain #player-wrapper iframe,
-        .fit-contain #player-wrapper #yt-player {
-            width: 100% !important;
-            height: 100% !important;
-            left: 0;
-            top: 0;
-            transform: none;
+        .fit-cover #stream-video {
+            object-fit: cover !important;
         }
 
-        /* Transparent Shield: completely covers the 1:1 square video */
+        /* Transparent Shield: blocks all user interaction & prevents controls */
         #shield {
             position: absolute;
             inset: 0;
@@ -134,7 +83,7 @@
             cursor: none !important;
         }
 
-        /* ── Broadcast Overlays ─────────────────────────────────── */
+        /* ── Broadcast Overlays ─────────────────────────────────────── */
         #overlays {
             position: absolute;
             inset: 0;
@@ -143,7 +92,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 110px 22px 50px 22px;
+            padding: 24px 32px;
         }
 
         /* Top Bar: LIVE Badge & Call-To-Action */
@@ -152,41 +101,38 @@
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            gap: 12px;
+            gap: 16px;
         }
 
         .live-tag {
             background: #ff0044;
             color: #fff;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 900;
             letter-spacing: 1.5px;
-            padding: 6px 14px;
-            border-radius: 6px;
+            padding: 8px 18px;
+            border-radius: 8px;
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            box-shadow: 0 0 16px rgba(255, 0, 68, 0.7);
+            gap: 8px;
+            box-shadow: 0 0 20px rgba(255, 0, 68, 0.7);
             text-transform: uppercase;
         }
 
         .live-tag::before {
             content: '';
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background: #fff;
             border-radius: 50%;
             animation: pulse-dot 1.2s infinite ease-in-out;
         }
 
         @keyframes pulse-dot {
-
-            0%,
-            100% {
+            0%, 100% {
                 opacity: 1;
                 transform: scale(1);
             }
-
             50% {
                 opacity: 0.3;
                 transform: scale(0.7);
@@ -197,70 +143,46 @@
         .cta-pill {
             background: rgba(10, 16, 32, 0.85);
             backdrop-filter: blur(14px);
-            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
             border-radius: 50px;
-            padding: 8px 18px;
+            padding: 10px 24px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 13px;
+            gap: 12px;
+            font-size: 14px;
             font-weight: 800;
             letter-spacing: 0.8px;
             color: #fff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 75, 110, 0.25);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 75, 110, 0.3);
             animation: border-glow 3s infinite alternate;
         }
 
         .cta-pill .heart {
             color: #ff3366;
-            font-size: 16px;
+            font-size: 17px;
             animation: heart-beat 1.4s infinite ease-in-out;
         }
 
         .cta-pill .bell {
             color: #ffcc00;
-            font-size: 15px;
+            font-size: 16px;
             animation: bell-ring 2.5s infinite ease-in-out;
         }
 
         @keyframes heart-beat {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            15% {
-                transform: scale(1.3);
-            }
-
-            30% {
-                transform: scale(1);
-            }
-
-            45% {
-                transform: scale(1.2);
-            }
+            0%, 100% { transform: scale(1); }
+            15% { transform: scale(1.3); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.2); }
         }
 
         @keyframes bell-ring {
-
-            0%,
-            60%,
-            100% {
-                transform: rotate(0);
-            }
-
-            10%,
-            30%,
-            50% {
-                transform: rotate(14deg);
-            }
-
-            20%,
-            40% {
-                transform: rotate(-14deg);
-            }
+            0%, 100% { transform: rotate(0deg); }
+            10% { transform: rotate(16deg); }
+            20% { transform: rotate(-16deg); }
+            30% { transform: rotate(12deg); }
+            40% { transform: rotate(-12deg); }
+            50% { transform: rotate(0deg); }
         }
 
         @keyframes border-glow {
@@ -268,10 +190,47 @@
                 border-color: rgba(255, 255, 255, 0.2);
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 51, 102, 0.3);
             }
-
             100% {
-                border-color: rgba(255, 60, 110, 0.8);
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 51, 102, 0.7);
+                border-color: rgba(255, 60, 110, 0.85);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 35px rgba(255, 51, 102, 0.7);
+            }
+        }
+
+        /* Floating Reaction Emojis */
+        .reaction-container {
+            position: absolute;
+            right: 40px;
+            bottom: 110px;
+            width: 80px;
+            height: 350px;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .floating-heart {
+            position: absolute;
+            bottom: 0;
+            font-size: 26px;
+            animation: float-up 3.5s ease-out forwards;
+            opacity: 0;
+            filter: drop-shadow(0 2px 10px rgba(255, 0, 80, 0.7));
+        }
+
+        @keyframes float-up {
+            0% {
+                transform: translateY(0) scale(0.6) rotate(0deg);
+                opacity: 0;
+            }
+            15% {
+                opacity: 1;
+                transform: translateY(-40px) scale(1.1) rotate(-8deg);
+            }
+            80% {
+                opacity: 0.9;
+            }
+            100% {
+                transform: translateY(-320px) scale(1.3) rotate(20deg);
+                opacity: 0;
             }
         }
 
@@ -279,24 +238,22 @@
         .bottom-banner {
             width: 100%;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            justify-content: flex-start;
+            margin-bottom: 8px;
         }
 
         .engagement-card {
             background: linear-gradient(135deg, rgba(18, 22, 38, 0.92), rgba(9, 12, 22, 0.94));
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 18px;
-            padding: 12px 24px;
+            padding: 12px 28px;
             display: flex;
             align-items: center;
             gap: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 180, 255, 0.2);
-            transform: translateY(0);
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 51, 102, 0.25);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .engagement-card.highlight {
@@ -304,21 +261,18 @@
         }
 
         @keyframes highlight-pulse {
-
-            0%,
-            100% {
+            0%, 100% {
                 transform: scale(1);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 45, 95, 0.4);
             }
-
             50% {
-                transform: scale(1.04);
+                transform: scale(1.03);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 45px rgba(255, 45, 95, 0.85);
             }
         }
 
         .banner-icon {
-            font-size: 28px;
+            font-size: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -327,89 +281,47 @@
         .banner-text {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 3px;
         }
 
         .banner-title {
             font-size: 15px;
-            font-weight: 900;
-            letter-spacing: 0.8px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #fff;
             text-transform: uppercase;
-            color: #ffffff;
         }
 
         .banner-title span {
-            color: #ff3b69;
+            color: #ff3366;
         }
 
         .banner-sub {
-            font-size: 11.5px;
-            font-weight: 700;
-            color: #a0aec0;
-            letter-spacing: 0.5px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 0.3px;
         }
 
         .banner-sub span {
-            color: #ffd15c;
-        }
-
-        /* Floating reaction hearts (simulates live audience activity) */
-        .reaction-container {
-            position: absolute;
-            right: 28px;
-            bottom: 120px;
-            width: 80px;
-            height: 320px;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 12;
-        }
-
-        .floating-heart {
-            position: absolute;
-            bottom: -30px;
-            font-size: 24px;
-            opacity: 0;
-            animation: float-up 3.4s ease-out forwards;
-        }
-
-        @keyframes float-up {
-            0% {
-                transform: translateY(0) scale(0.6) rotate(0deg);
-                opacity: 0;
-            }
-
-            15% {
-                opacity: 0.9;
-            }
-
-            80% {
-                opacity: 0.8;
-            }
-
-            100% {
-                transform: translateY(-300px) scale(1.2) rotate(20deg);
-                opacity: 0;
-            }
+            color: #ffcc00;
+            font-weight: 700;
         }
     </style>
 </head>
 
 <body>
     <div id="stream-container">
-        <!-- Ambient background for horizontal videos -->
-        <div id="ambient-glow"></div>
-
-        <!-- Video Stage -->
+        <!-- Video Stage (Direct HTML5 Video) -->
         <div id="video-stage">
-            <div id="player-wrapper">
-                <iframe id="yt-player" referrerpolicy="strict-origin-when-cross-origin"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-                </iframe>
-                <!-- Click shield covers the 1:1 square video -->
-                <div id="shield"></div>
-            </div>
+            <video id="stream-video"
+                playsinline
+                autoplay
+                loop
+                preload="auto">
+            </video>
+            <!-- Click shield prevents player controls & interaction -->
+            <div id="shield"></div>
         </div>
 
         <!-- Broadcast Overlays -->
@@ -429,53 +341,30 @@
             <div class="reaction-container" id="reactionBox"></div>
 
             <!-- Bottom Engagement Banner -->
-
+            <div class="bottom-banner">
+                <div class="engagement-card" id="bannerCard">
+                    <div class="banner-icon">❤️</div>
+                    <div class="banner-text">
+                        <div class="banner-title">Double Tap <span>To Support</span></div>
+                        <div class="banner-sub">🔔 Hit <span>SUBSCRIBE</span> for 24/7 non-stop streams!</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- YouTube IFrame Player API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
         'use strict';
 
         // ═══════════════════════════════════════════════════════════════
-        // 1. CONFIGURATION (PASTE ANY YOUTUBE LINK + START TIME)
+        // 1. CONFIGURATION (DEFAULT VIDEO FILE + START TIME)
         // ═══════════════════════════════════════════════════════════════
-        // You can paste ANY full YouTube link, Shorts link, or video ID here!
-        // Examples:
-        //   'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-        //   'https://youtu.be/dQw4w9WgXcQ?t=1m30s'
-        //   'https://www.youtube.com/shorts/dQw4w9WgXcQ'
-        //   'dQw4w9WgXcQ'
-        const DEFAULT_VIDEO_URL = 'https://www.youtube.com/live/akMuwfhCOQg?si=6Uj2WVpSQ1QwZ_hf';
+        // Place your video file (e.g. video.mp4) in the repository root directory!
+        // You can also pass custom video via URL: ?v=video.mp4 or ?v=my_video.mp4
+        const DEFAULT_VIDEO_FILE = 'video.mp4';
 
-        // Default start time: in seconds or mm:ss format (e.g. 90, '1:30', '2m15s')
-        // Set to 0 to start from the beginning
-        const DEFAULT_START_TIME = 0;
-
-        // Helper: parses any YouTube link and extracts video ID & timestamp
-        function parseYouTubeUrl(urlOrId) {
-            if (!urlOrId) return { id: 'M7lc1UVf-VE', start: 0 };
-            urlOrId = urlOrId.trim();
-            let id = '';
-            let start = 0;
-
-            if (/^[a-zA-Z0-9_-]{11}$/.test(urlOrId)) {
-                id = urlOrId;
-            } else {
-                const regExp = /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i;
-                const match = urlOrId.match(regExp);
-                if (match && match[1]) {
-                    id = match[1];
-                }
-                const timeMatch = urlOrId.match(/[?&](?:t|start)=([0-9hms:]+)/i);
-                if (timeMatch && timeMatch[1]) {
-                    start = parseTimeToSeconds(timeMatch[1]);
-                }
-            }
-            return { id: id || 'M7lc1UVf-VE', start };
-        }
+        // Default starting timestamp: in seconds or mm:ss format (e.g. 0, 90, '1:30', '3:00')
+        const DEFAULT_START_TIME = '0:00';
 
         // Helper: converts seconds, '1:30', '01:15:30', or '2m15s' into integer seconds
         function parseTimeToSeconds(timeVal) {
@@ -483,7 +372,7 @@
             if (typeof timeVal === 'number') return Math.max(0, timeVal);
             timeVal = String(timeVal).trim().toLowerCase();
 
-            if (/^\d+$/.test(timeVal)) return parseInt(timeVal, 10);
+            if (/^\d+(\.\d+)?$/.test(timeVal)) return parseFloat(timeVal);
             if (/[hms]/.test(timeVal)) {
                 let total = 0;
                 const h = timeVal.match(/(\d+)h/);
@@ -503,179 +392,86 @@
         }
 
         const params = new URLSearchParams(window.location.search);
-        const rawInput = params.get('v') || params.get('url') || DEFAULT_VIDEO_URL;
-        const parsed = parseYouTubeUrl(rawInput);
-        const VIDEO_ID = parsed.id;
-
-        // Starting timestamp can come from ?t=, ?start=, the link itself, or DEFAULT_START_TIME
-        const rawTime = params.get('t') || params.get('start') || parsed.start || DEFAULT_START_TIME;
+        const VIDEO_SRC = params.get('v') || params.get('video') || params.get('src') || DEFAULT_VIDEO_FILE;
+        const rawTime = params.get('t') || params.get('start') || DEFAULT_START_TIME;
         const START_TIME = parseTimeToSeconds(rawTime);
+        const FIT_MODE = params.get('fit') || 'contain'; // 'contain' or 'cover'
+        const ANNOUNCE_INTERVAL = Math.max(25, Number(params.get('interval')) || 60);
 
-        console.log(`[Stream Player] Video ID: ${VIDEO_ID} | Starting at: ${START_TIME}s`);
-
-        const FIT_MODE = params.get('fit') || 'cover'; // Default 'cover' crops 16:9 into a perfect 1:1 square
-        const ANNOUNCE_INTERVAL = Math.max(30, Number(params.get('interval')) || 65); // Seconds between voice calls
-        if (FIT_MODE === 'contain') {
-            document.getElementById('video-stage').classList.add('fit-contain');
+        if (FIT_MODE === 'cover') {
+            document.getElementById('video-stage').classList.add('fit-cover');
         }
 
-        // Set ambient glow thumbnail from YouTube
-        const ambientGlow = document.getElementById('ambient-glow');
-        ambientGlow.style.backgroundImage = `url('https://img.youtube.com/vi/${VIDEO_ID}/hqdefault.jpg')`;
+        console.log(`[Stream Player] Loading video: ${VIDEO_SRC} | Starting at: ${START_TIME}s`);
 
         // ═══════════════════════════════════════════════════════════════
-        // 2. YOUTUBE AUTONOMOUS EMBED PLAYER (NO CONTROLS, 100% AUTO-LOOP)
+        // 2. DIRECT HTML5 VIDEO PLAYER (ZERO CONTROLS, AUTONOMOUS AUTO-LOOP)
         // ═══════════════════════════════════════════════════════════════
-        let ytPlayer = null;
-        let isPlayerReady = false;
-        let hasUserInteracted = false;
+        const videoEl = document.getElementById('stream-video');
+        videoEl.src = VIDEO_SRC;
 
-        // Populate iframe immediately so native browser parser begins buffering & autoplaying on load
-        const iframeEl = document.getElementById('yt-player');
-        let embedSrc = `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&modestbranding=1&rel=0&loop=1&playlist=${VIDEO_ID}&start=${START_TIME}&iv_load_policy=3&playsinline=1&enablejsapi=1&vq=hd1080`;
-        if (window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null') {
-            embedSrc += `&origin=${encodeURIComponent(window.location.origin)}`;
-        }
-        if (iframeEl) {
-            iframeEl.src = embedSrc;
+        let hasSought = false;
+        function applyStartTime() {
+            if (!hasSought && START_TIME > 0 && videoEl.duration && videoEl.duration > 0) {
+                hasSought = true;
+                videoEl.currentTime = Math.min(START_TIME, videoEl.duration - 1);
+            }
         }
 
-        // Enforce maximum available resolution (4K, 1440p, 1080p, 720p)
-        function forceHighestQuality() {
-            if (!ytPlayer) return;
-            try {
-                if (ytPlayer.getAvailableQualityLevels) {
-                    const levels = ytPlayer.getAvailableQualityLevels();
-                    if (levels && levels.length > 0) {
-                        const best = levels[0];
-                        if (ytPlayer.getPlaybackQuality && ytPlayer.getPlaybackQuality() !== best) {
-                            ytPlayer.setPlaybackQuality(best);
-                        }
-                    } else if (ytPlayer.setPlaybackQuality) {
-                        ytPlayer.setPlaybackQuality('highres');
-                    }
-                }
-            } catch (e) { }
-        }
+        videoEl.addEventListener('loadedmetadata', applyStartTime);
+        videoEl.addEventListener('canplay', applyStartTime);
 
-        function initPlayer() {
-            if (ytPlayer || !window.YT || !window.YT.Player) return;
-
-            try {
-                // Attach YT.Player to the pre-rendered iframe
-                ytPlayer = new YT.Player('yt-player', {
-                    events: {
-                        onReady: onPlayerReady,
-                        onStateChange: onPlayerStateChange,
-                        onPlaybackQualityChange: forceHighestQuality,
-                        onError: onPlayerError
-                    }
+        // Instant autonomous playback
+        function startPlayback() {
+            applyStartTime();
+            const playPromise = videoEl.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn('[Stream Player] Autoplay with audio restricted, resuming muted first:', err);
+                    videoEl.muted = true;
+                    videoEl.play().catch(() => {});
                 });
-            } catch (e) {
-                console.warn('YT.Player bind notice:', e);
             }
         }
 
-        window.onYouTubeIframeAPIReady = initPlayer;
+        startPlayback();
 
-        // Auto-initialize as soon as YouTube API script finishes
-        if (window.YT && window.YT.Player) {
-            initPlayer();
-        } else {
-            const apiCheckTimer = setInterval(() => {
-                if (window.YT && window.YT.Player) {
-                    clearInterval(apiCheckTimer);
-                    initPlayer();
-                }
-            }, 100);
-        }
+        // Progressive autonomous un-muting
+        videoEl.addEventListener('playing', () => {
+            applyStartTime();
+            setTimeout(() => {
+                try {
+                    videoEl.muted = false;
+                    videoEl.volume = 1.0;
+                } catch (e) { }
+            }, 500);
+        });
 
-        function onPlayerReady(event) {
-            isPlayerReady = true;
+        // Auto-loop when video reaches the end (restarts at START_TIME)
+        videoEl.addEventListener('ended', () => {
             try {
-                if (START_TIME > 0) {
-                    event.target.seekTo(START_TIME, true);
-                }
-                event.target.playVideo();
+                videoEl.currentTime = START_TIME > 0 ? START_TIME : 0;
+                videoEl.play();
             } catch (e) { }
+        });
 
-            // Lock to highest resolution immediately
-            forceHighestQuality();
-
-            // Safely attempt unmute:
-            // If running on streaming runner (GitHub Actions) or preview with --autoplay-policy, unmuting works immediately!
-            // If running in standard Chrome without gesture, onPlayerStateChange will catch any pause, re-mute, and keep playing!
-            setTimeout(() => {
-                try {
-                    event.target.unMute();
-                    event.target.setVolume(100);
-                } catch (e) { }
-                forceHighestQuality();
-            }, 600);
-        }
-
-        function onPlayerStateChange(event) {
-            // Re-enforce highest quality as soon as buffering/playback starts
-            if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
-                forceHighestQuality();
-            }
-
-            // CRITICAL FIX: If browser attempts to pause the video due to unmute without user gesture,
-            // immediately re-mute and resume so the video NEVER stays frozen!
-            if (event.data === YT.PlayerState.PAUSED) {
-                if (!hasUserInteracted) {
-                    try {
-                        event.target.mute();
-                        event.target.playVideo();
-                    } catch (e) { }
-                }
-            }
-            // Auto-loop when video reaches the end (restarts at START_TIME)
-            if (event.data === YT.PlayerState.ENDED) {
-                try {
-                    if (START_TIME > 0) event.target.seekTo(START_TIME, true);
-                    else event.target.seekTo(0, true);
-                    event.target.playVideo();
-                } catch (e) { }
-            }
-        }
-
-        function onPlayerError(event) {
-            console.warn('YouTube Player notice:', event.data);
-            setTimeout(() => {
-                try {
-                    if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
-                } catch (e) { }
-            }, 2000);
-        }
-
-        // Keep-alive watchdog: ensures video stays playing at highest quality 100% of the time
+        // Watchdog: ensures video is always playing and never frozen
         setInterval(() => {
-            if (ytPlayer && ytPlayer.getPlayerState) {
-                try {
-                    const state = ytPlayer.getPlayerState();
-                    if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED || state === -1) {
-                        ytPlayer.playVideo();
-                    }
-                    forceHighestQuality();
-                } catch (e) { }
+            if (videoEl.paused) {
+                startPlayback();
             }
         }, 1500);
 
-        // Simulated autonomous clicker: dispatches click events automatically on startup
-        function autoClick() {
-            try {
-                const shield = document.getElementById('shield');
-                if (shield) {
-                    shield.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                }
-                document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            } catch (e) { }
-        }
-        autoClick();
-        setTimeout(autoClick, 200);
-        setTimeout(autoClick, 600);
-        setTimeout(autoClick, 1200);
+        // Global autonomous audio unlock on any user interaction
+        ['DOMContentLoaded', 'load', 'click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(ev => {
+            window.addEventListener(ev, () => {
+                try {
+                    videoEl.muted = false;
+                    videoEl.volume = 1.0;
+                    if (videoEl.paused) videoEl.play();
+                } catch (e) { }
+            }, { passive: true });
+        });
 
         // ═══════════════════════════════════════════════════════════════
         // 3. VOICE ANNOUNCEMENTS (DOUBLE TAP & SUBSCRIBE)
@@ -707,13 +503,11 @@
         }
 
         function playVoice(clipId, fallbackText) {
-            // Stop any prior speech or audio
             try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { }
             if (currentAudio) {
                 try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) { }
             }
 
-            // Attempt to play pre-rendered neural voice file
             try {
                 let snd = voiceCache[clipId];
                 if (!snd) {
@@ -726,7 +520,6 @@
                 const p = snd.play();
                 if (p !== undefined) {
                     p.catch(() => {
-                        // If file not found, fall back to browser TTS
                         fallbackSpeech(fallbackText);
                     });
                     return;
@@ -760,7 +553,7 @@
         setTimeout(() => {
             triggerVoiceAnnouncement();
             setInterval(triggerVoiceAnnouncement, ANNOUNCE_INTERVAL * 1000);
-        }, 12000); // First announcement after 12 seconds
+        }, 10000); // First announcement after 10 seconds
 
         // ═══════════════════════════════════════════════════════════════
         // 4. ANIMATED OVERLAYS & ENGAGEMENT BURSTS
@@ -782,8 +575,8 @@
             const el = document.createElement('div');
             el.className = 'floating-heart';
             el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-            el.style.left = `${Math.floor(Math.random() * 45)}px`;
-            el.style.fontSize = `${Math.floor(Math.random() * 14 + 20)}px`;
+            el.style.left = `${Math.floor(Math.random() * 50)}px`;
+            el.style.fontSize = `${Math.floor(Math.random() * 14 + 22)}px`;
             reactionBox.appendChild(el);
             setTimeout(() => el.remove(), 3500);
         }
@@ -794,24 +587,10 @@
             }
         }
 
-        // Ambient reactions floating up every 4-8 seconds
+        // Ambient reactions floating up periodically
         setInterval(() => {
             if (Math.random() > 0.4) spawnReaction();
         }, 4000);
-
-        // Global autonomous audio unlock
-        ['DOMContentLoaded', 'load', 'click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(ev => {
-            window.addEventListener(ev, () => {
-                hasUserInteracted = true;
-                if (ytPlayer && ytPlayer.unMute) {
-                    try {
-                        ytPlayer.unMute();
-                        ytPlayer.setVolume(100);
-                        ytPlayer.playVideo();
-                    } catch (e) { }
-                }
-            }, { passive: true });
-        });
     </script>
 </body>
 
