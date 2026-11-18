@@ -1063,12 +1063,12 @@
                 }, 25);
             } catch (e) { }
         }
-        function particle(x, y, count, color, sizeScale = 1) { count = Math.min(fxEnabled ? 8 : 3, count); for (let k = 0; k < count; k++) { let a = rand(0, TWO_PI), v = rand(45, 190) * sizeScale, life = rand(.15, .45); sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, color, r: rand(1.1, 2.4) * sizeScale }); } if (sparks.length > 90) sparks.splice(0, sparks.length - 90); }
-        function ring(x, y, color = '#ffb957', size = 1) { shockwaves.push({ x, y, life: .4, max: .4, r: 8, v: 320 * size, color }); if (shockwaves.length > 12) shockwaves.shift(); }
-        function floating(x, y, label, color = '#ffe38b') { texts.push({ x, y, label, color, life: .9, max: .9 }); if (texts.length > 10) texts.shift(); }
-        function boltPoints(x1, y1, x2, y2, jitter = 14) { const pts = [{ x: x1, y: y1 }]; const dx = x2 - x1, dy = y2 - y1, dist = Math.hypot(dx, dy) || 1; const steps = Math.max(4, Math.min(8, Math.floor(dist / 38))); const nx = -dy / dist, ny = dx / dist; for (let i = 1; i < steps; i++) { const t = i / steps, env = Math.sin(t * Math.PI), offset = (Math.random() - .5) * jitter * 2 * env; pts.push({ x: x1 + dx * t + nx * offset, y: y1 + dy * t + ny * offset }); } pts.push({ x: x2, y: y2 }); return pts; }
-        function thunder(a, b, big = false) { const col = big ? '#ffe677' : (Math.random() < .35 ? '#4ef9ff' : Math.random() < .5 ? '#c07aff' : a.color); const pts = boltPoints(a.x, a.y, b.x, b.y, big ? 22 : 14); const forks = []; if (big) { const mid = pts[Math.floor(pts.length / 2)]; const fa = Math.atan2(b.y - a.y, b.x - a.x) + rand(-.8, .8); forks.push(boltPoints(mid.x, mid.y, mid.x + Math.cos(fa) * 55, mid.y + Math.sin(fa) * 55, 10)); } beams.push({ pts, forks, color: col, life: big ? .32 : .14, max: big ? .32 : .14, width: big ? 5.5 : 2.2, big }); if (beams.length > 22) beams.shift(); sfx(big ? 'thunderKO' : 'thunder'); }
-        function normalAttack() { const living = fighters.filter(f => f.alive); if (living.length < 2) return; const count = Math.min(living.length, living.length > 25 ? 3 : 2); for (let k = 0; k < count; k++) { const a = living[Math.floor(rand(0, living.length))]; let target = null, best = -1; for (let i = 0; i < 3; i++) { const b = living[Math.floor(rand(0, living.length))]; if (b === a) continue; const dist = Math.hypot(b.x - a.x, b.y - a.y), weight = Math.random() * (.4 + 1 / (1 + dist / 220)); if (weight > best) { best = weight; target = b; } } if (!target) continue; thunder(a, target, false); let dmg = rand(0.5, 1.5); if (target.shield > 0) { target.shield = Math.max(0, target.shield - dmg * 1.2); } else { target.hp = Math.max(0, target.hp - dmg); } target.hit = .22; a.damage += dmg; if (Math.random() < .25) particle(target.x, target.y, 2, a.color, .5); } }
+        function particle(x, y, count, color, sizeScale = 1) { count = Math.min(fxEnabled ? 5 : 2, count); for (let k = 0; k < count; k++) { let a = rand(0, TWO_PI), v = rand(45, 160) * sizeScale, life = rand(.15, .35); sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, color, r: rand(1.1, 2.0) * sizeScale }); } if (sparks.length > 35) sparks.splice(0, sparks.length - 35); }
+        function ring(x, y, color = '#ffb957', size = 1) { shockwaves.push({ x, y, life: .35, max: .35, r: 8, v: 300 * size, color }); if (shockwaves.length > 6) shockwaves.shift(); }
+        function floating(x, y, label, color = '#ffe38b') { texts.push({ x, y, label, color, life: .8, max: .8 }); if (texts.length > 8) texts.shift(); }
+        function boltPoints(x1, y1, x2, y2, jitter = 14) { const pts = [{ x: x1, y: y1 }]; const dx = x2 - x1, dy = y2 - y1, dist = Math.hypot(dx, dy) || 1; const steps = Math.max(3, Math.min(6, Math.floor(dist / 48))); const nx = -dy / dist, ny = dx / dist; for (let i = 1; i < steps; i++) { const t = i / steps, env = Math.sin(t * Math.PI), offset = (Math.random() - .5) * jitter * 2 * env; pts.push({ x: x1 + dx * t + nx * offset, y: y1 + dy * t + ny * offset }); } pts.push({ x: x2, y: y2 }); return pts; }
+        function thunder(a, b, big = false) { const col = big ? '#ffe677' : (Math.random() < .35 ? '#4ef9ff' : Math.random() < .5 ? '#c07aff' : a.color); const pts = boltPoints(a.x, a.y, b.x, b.y, big ? 18 : 12); const forks = []; if (big) { const mid = pts[Math.floor(pts.length / 2)]; const fa = Math.atan2(b.y - a.y, b.x - a.x) + rand(-.8, .8); forks.push(boltPoints(mid.x, mid.y, mid.x + Math.cos(fa) * 45, mid.y + Math.sin(fa) * 45, 8)); } beams.push({ pts, forks, color: col, life: big ? .28 : .12, max: big ? .28 : .12, width: big ? 4.5 : 2.0, big }); if (beams.length > 10) beams.shift(); sfx(big ? 'thunderKO' : 'thunder'); }
+        function normalAttack() { const living = fighters.filter(f => f.alive); if (living.length < 2) return; const count = Math.min(living.length, living.length > 25 ? 2 : 1); for (let k = 0; k < count; k++) { const a = living[Math.floor(rand(0, living.length))]; let target = null, best = -1; for (let i = 0; i < 3; i++) { const b = living[Math.floor(rand(0, living.length))]; if (b === a) continue; const dist = Math.hypot(b.x - a.x, b.y - a.y), weight = Math.random() * (.4 + 1 / (1 + dist / 220)); if (weight > best) { best = weight; target = b; } } if (!target) continue; thunder(a, target, false); let dmg = rand(0.5, 1.5); if (target.shield > 0) { target.shield = Math.max(0, target.shield - dmg * 1.2); } else { target.hp = Math.max(0, target.hp - dmg); } target.hit = .22; a.damage += dmg; if (Math.random() < .20) particle(target.x, target.y, 2, a.color, .5); } }
         function eliminate() {
             if (alive < 2) return; const living = fighters.filter(f => f.alive); const victim = living.reduce((best, f) => (f.hp < best.hp ? f : best), living[0]); let attacker = null; let near = Infinity; for (const f of living) { if (f === victim) continue; const d = Math.hypot(f.x - victim.x, f.y - victim.y); const weighted = d * (rand(.70, 1.1)) - (f.kills * 10); if (weighted < near) { near = weighted; attacker = f; } } if (!attacker) return; victim.hp = 0; thunder(attacker, victim, true); const bystander = living.find(x => x.alive && x !== attacker && x !== victim); if (bystander) thunder(bystander, victim, true); victim.alive = false; alive--; attacker.kills++; attacker.streak++; attacker.hp = clamp(attacker.hp + rand(12, 21), 0, 100); attacker.shield = clamp(attacker.shield + 7, 0, 40); attacker.glow = 1; shake = fxEnabled ? 9 : 3; flash = .25; particle(victim.x, victim.y, fxEnabled ? 24 : 6, '#ff5980', 1.2); particle(victim.x, victim.y, fxEnabled ? 18 : 5, '#ffcf67', .95); ring(victim.x, victim.y, '#ff728e', 1.1); floating(victim.x, victim.y, 'K.O.', '#ffd46f'); showKO(victim, attacker); const sName = spokenName(victim); const text = `${sName} eliminated`;
             if (alive === 1) { champion(attacker); return; }
@@ -1109,7 +1109,7 @@
                 }
             }
             physics(t);
-            while (attackClock > .16) { attackClock -= .16; normalAttack(); }
+            if (attackClock > .20) { attackClock = 0; normalAttack(); }
             if (koClock >= nextKo) { koClock = 0; nextKo = countdownInterval(); eliminate(); }
             if (engagementClock >= 60) { engagementClock = 0; const isFirst = Math.random() < .5; const key = isFirst ? 'm_cta1' : 'm_cta2'; const speech = isFirst ? "Double tap on the screen if your country is still alive, and comment down your country!" : "Comment down your country right now, and double tap the screen to support your nation!"; const banner = isFirst ? "❤️ DOUBLE TAP IF YOUR COUNTRY IS ALIVE • COMMENT YOUR FLAG" : "💬 COMMENT DOWN YOUR COUNTRY • DOUBLE TAP TO SUPPORT"; showEvent(banner, 5.0); playVoice(key, speech); }
             if (beatClock > .6) { beatClock = 0; musicBeat(); }
@@ -1118,13 +1118,27 @@
         }
         function circle(x, y, r, fill, stroke, width = 1) { ctx.beginPath(); ctx.arc(x, y, r, 0, TWO_PI); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); } }
         function drawBackground(tm) { ctx.drawImage(bgCanvas, 0, 0); }
+        let lastGradR = 0, cachedRg = null, cachedFloor = null;
         function drawArena(tm) {
-            let rg = ctx.createRadialGradient(CX, CY, arenaRadius - 45, CX, CY, arenaRadius + 45); rg.addColorStop(0, '#0a204000'); rg.addColorStop(.46, '#19ddff45'); rg.addColorStop(1, '#0b273800'); circle(CX, CY, arenaRadius + 45, rg);
-            const floor = ctx.createRadialGradient(CX - 70, CY - 100, 20, CX, CY, arenaRadius); floor.addColorStop(0, '#071325'); floor.addColorStop(.7, '#080d1c'); floor.addColorStop(1, '#02060f'); circle(CX, CY, arenaRadius, floor);
+            if (Math.abs(arenaRadius - lastGradR) > 1 || !cachedRg) {
+                lastGradR = arenaRadius;
+                cachedRg = ctx.createRadialGradient(CX, CY, arenaRadius - 45, CX, CY, arenaRadius + 45);
+                cachedRg.addColorStop(0, '#0a204000');
+                cachedRg.addColorStop(.46, '#19ddff45');
+                cachedRg.addColorStop(1, '#0b273800');
+                cachedFloor = ctx.createRadialGradient(CX - 70, CY - 100, 20, CX, CY, arenaRadius);
+                cachedFloor.addColorStop(0, '#071325');
+                cachedFloor.addColorStop(.7, '#080d1c');
+                cachedFloor.addColorStop(1, '#02060f');
+            }
+            circle(CX, CY, arenaRadius + 45, cachedRg);
+            circle(CX, CY, arenaRadius, cachedFloor);
             ctx.save(); ctx.beginPath(); ctx.arc(CX, CY, arenaRadius, 0, TWO_PI); ctx.clip();
             // faint polar grid and crosshair
             ctx.strokeStyle = '#77b4fc19'; ctx.lineWidth = 1; for (let r = 70; r < arenaRadius; r += 65)circle(CX, CY, r, null, '#a2b9e817', 1);
-            for (let i = 0; i < 24; i++) { let a = i * TWO_PI / 24 + tm * .015; ctx.beginPath(); ctx.moveTo(CX + Math.cos(a) * 50, CY + Math.sin(a) * 50); ctx.lineTo(CX + Math.cos(a) * arenaRadius, CY + Math.sin(a) * arenaRadius); ctx.stroke(); }
+            ctx.beginPath();
+            for (let i = 0; i < 24; i++) { let a = i * TWO_PI / 24 + tm * .015; ctx.moveTo(CX + Math.cos(a) * 50, CY + Math.sin(a) * 50); ctx.lineTo(CX + Math.cos(a) * arenaRadius, CY + Math.sin(a) * arenaRadius); }
+            ctx.stroke();
             // large arena symbol under fighters
             ctx.save(); ctx.translate(CX, CY); ctx.rotate(-.12); ctx.textAlign = 'center'; ctx.fillStyle = '#7dd9ff0a'; ctx.font = '1000 italic 69px Segoe UI, sans-serif'; ctx.fillText('W C F', 0, 21); ctx.restore();
             // long flowing light trails; brighter when few competitors remain.
@@ -1148,7 +1162,7 @@
             for (let i = 0; i < 12; i++) { let a = tm * (i % 2 ? -.07 : .09) + i * TWO_PI / 12; let x = CX + Math.cos(a) * (arenaRadius + 19), y = CY + Math.sin(a) * (arenaRadius + 19); ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = i % 3 ? '#4ecfff9d' : '#ffd37b'; ctx.fillRect(-2, -2, 4, 4); ctx.restore(); }
         }
         function draw(tm) { ctx.setTransform(Q, 0, 0, Q, 0, 0); drawBackground(tm); ctx.save(); if (shake > 0) ctx.translate(rand(-shake, shake) * .5, rand(-shake, shake) * .5); drawArena(tm); ctx.restore(); }
-        function frame(now) { const dt = lastTick ? Math.min(.055, (now - lastTick) / 1000) : .016; lastTick = now; if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) { } } if (!paused) update(dt); draw(now / 1000); requestAnimationFrame(frame); }
+        function frame(now) { const dt = lastTick ? Math.min(.033, (now - lastTick) / 1000) : .016; lastTick = now; if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) { } } if (!paused) update(dt); draw(now / 1000); requestAnimationFrame(frame); }
         window.addEventListener('keydown', e => { if (['INPUT', 'SELECT'].includes(document.activeElement?.tagName)) return; if (e.key === ' ') { e.preventDefault(); paused = !paused; updateDashboard(); } if (e.key.toLowerCase() === 'm') audioEnabled ? muteAudio() : unlockAudio(); if (e.key.toLowerCase() === 'r') beginRound(true); });
         window.addEventListener('pagehide', () => { try { speechSynthesis.cancel() } catch (e) { } });
         initAudioEngine();
