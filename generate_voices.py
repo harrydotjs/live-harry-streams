@@ -9,8 +9,8 @@ ANNOUNCEMENTS = [
     ("cta_1", "Double tap on the screen, and subscribe to the channel for more non-stop streams!"),
     ("cta_2", "If you're enjoying the stream, double tap your screen and hit that subscribe button!"),
     ("cta_3", "Don't forget to double tap the screen to support us, and subscribe so you never miss another stream!"),
-    ("cta_4", "Double tap the screen to show some love, and subscribe to the channel right now!"),
-    ("cta_5", "Double tap that screen right now, and make sure to subscribe to the channel!"),
+    ("cta_4", "like the stream, and subscribe to the channel right now!"),
+    ("cta_5", "Hit a like, and make sure to subscribe to the channel!"),
 ]
 
 async def generate(edge_tts, text, filename):
