@@ -6,11 +6,11 @@ on:
       video_file:
         description: 'Uploaded video file name or direct URL (e.g. video.mp4)'
         required: false
-        default: 'https://archive.org/download/video_20261118/video.mp4'
+        default: 'https://archive.org/download/1-hour-20-minutes-of-relaxing-minecraft-parkour-nostalgia-scenery-no-ads-bbswitzer-1080p-h-264/1%20hour%2020%20minutes%20of%20relaxing%20Minecraft%20Parkour%20%28Nostalgia%2C%20Scenery%2C%20No%20Ads%29%20-%20bbswitzer%20%281080p%2C%20h264%29.mp4'
       start_time:
         description: 'Start time (e.g. 50:00, 1:30, or 90). Leave empty to start from 0'
         required: false
-        default: '50:00'
+        default: '0'
   schedule:
     # 2 segments × 5 hours = 10 hours/day (IST = UTC+5:30)
     - cron: '30 6 * * *'   # Segment 1: 12:00 PM IST → 5:00 PM IST
