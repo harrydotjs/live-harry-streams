@@ -25,11 +25,11 @@ jobs:
       - name: Checkout repository files
         uses: actions/checkout@v4
 
-      # ── Install native multimedia packages ───────────────────────────
-      - name: Install FFmpeg, Python, Fonts
+      # ── Install native multimedia packages & high-speed aria2c ────────
+      - name: Install FFmpeg, Python, Fonts, aria2
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg python3-pip fonts-dejavu-core
+          sudo apt-get install -y ffmpeg python3-pip fonts-dejavu-core aria2
 
       # ── Generate Broadcaster Voices & Announcements Loop ─────────────
       - name: Generate Natural Broadcast Announcer Audio & Overlay
@@ -38,7 +38,7 @@ jobs:
           python3 generate_voices.py
           python3 generate_overlay.py overlay.png
 
-      # ── Fetch Video (Direct Download from Archive.org / Drive / Dropbox) ─
+      # ── Fetch Video (Multi-threaded Turbo Download 30-50 MB/s) ───────
       - name: Fetch Video File
         run: |
           TARGET_FILE="${{ github.event.inputs.video_file || secrets.VIDEO_FILE || 'https://archive.org/download/video_20261118/video.mp4' }}"
@@ -56,10 +56,10 @@ jobs:
               if [[ ! "$DL_URL" =~ dl=1 ]]; then
                 DL_URL="${DL_URL}?dl=1"
               fi
-              curl -L --retry 5 -o video.mp4 "$DL_URL"
+              aria2c -x 16 -s 16 -k 1M -j 16 --retry-wait 2 --max-tries 5 -o video.mp4 "$DL_URL" || curl -L --retry 5 -o video.mp4 "$DL_URL"
             else
-              echo "Downloading direct file via curl..."
-              curl -L -C - --retry 5 -o video.mp4 "$TARGET_FILE"
+              echo "High-speed multi-threaded download via aria2c (16 parallel connections)..."
+              aria2c -x 16 -s 16 -k 1M -j 16 --retry-wait 2 --max-tries 5 -o video.mp4 "$TARGET_FILE" || curl -L --retry 5 -o video.mp4 "$TARGET_FILE"
             fi
             echo "Download completed. File details:"
             ls -lh video.mp4 || true
@@ -106,16 +106,23 @@ jobs:
         env:
           KEY: ${{ secrets.STREAM_KEY }}
         run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::STREAM_KEY secret is missing! Please go to your repo Settings -> Secrets and variables -> Actions and add your YouTube STREAM_KEY."
+            exit 1
+          fi
+
           echo "Starting 1080x1920 YouTube Shorts live broadcast..."
           timeout 18000 ffmpeg \
             -re \
             -stream_loop -1 -i stream_source.mp4 \
-            -loop 1 -i overlay.png \
+            -loop 1 -framerate 30 -i overlay.png \
             -stream_loop -1 -i announcements_loop.mp3 \
             -filter_complex "\
               [0:v]crop='min(in_w,in_h)':'min(in_w,in_h)':(in_w-min(in_w,in_h))/2:(in_h-min(in_w,in_h))/2,scale=1080:1080,pad=1080:1920:0:420:black[vbase]; \
-              [vbase][1:v]overlay=0:0:shortest=1[vout]; \
-              [0:a][2:a]amix=inputs=2:duration=first:dropout_transition=2:weights=1.0 1.2[aout]" \
+              [vbase][1:v]overlay=0:0:eof_action=repeat[vout]; \
+              [0:a]aformat=channel_layouts=stereo:sample_rates=44100[a0]; \
+              [2:a]aformat=channel_layouts=stereo:sample_rates=44100[a2]; \
+              [a0][a2]amix=inputs=2:duration=first:dropout_transition=2:weights=1.0 1.2[aout]" \
             -map "[vout]" -map "[aout]" \
             -c:v libx264 -preset ultrafast \
               -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 14000k \
@@ -123,4 +130,12 @@ jobs:
             -c:a aac -b:a 192k -ar 44100 -ac 2 \
             -threads 2 \
             -flvflags no_duration_filesize \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY" || true
+            -f flv "rtmp://a.rtmp.youtube.com/live2/$KEY"
+
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 0 ]; then
+            echo "Stream segment completed successfully after 5 hours."
+          else
+            echo "FFmpeg exited with code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
