@@ -27,30 +27,31 @@ def create_stream_overlay(output_path="overlay.png", width=1080, height=1920):
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Fonts
-    font_live = get_font(26, bold=True)
-    font_cta = get_font(24, bold=True)
+    try:
+        # Fonts
+        font_live = get_font(26, bold=True)
+        font_cta = get_font(24, bold=True)
 
-    # ── 1. Top-Left: "LIVE" Badge ─────────────────────────────────────
-    # Box: x: 50..220, y: 75..135
-    live_box = [50, 75, 210, 135]
-    draw.rounded_rectangle(live_box, radius=12, fill=(255, 0, 68, 255), outline=(255, 255, 255, 140), width=1)
-    
-    # White pulsing live dot: center (85, 105), radius 7
-    draw.ellipse([78, 98, 92, 112], fill=(255, 255, 255, 255))
-    
-    # "LIVE" text
-    draw.text((105, 88), "LIVE", fill=(255, 255, 255, 255), font=font_live)
+        # ── 1. Top-Left: "LIVE" Badge ─────────────────────────────────────
+        live_box = [50, 75, 210, 135]
+        draw.rounded_rectangle(live_box, radius=12, fill=(255, 0, 68, 255), outline=(255, 255, 255, 140), width=1)
+        
+        # White pulsing live dot: center (85, 105), radius 7
+        draw.ellipse([78, 98, 92, 112], fill=(255, 255, 255, 255))
+        
+        # "LIVE" text
+        draw.text((105, 88), "LIVE", fill=(255, 255, 255, 255), font=font_live)
 
-    # ── 2. Top-Right: "LIKE • SUBSCRIBE" Pill ─────────────────────────
-    # Box: x: 630..1030, y: 75..135
-    cta_box = [630, 75, 1030, 135]
-    draw.rounded_rectangle(cta_box, radius=30, fill=(14, 18, 34, 245), outline=(255, 51, 102, 230), width=2)
+        # ── 2. Top-Right: "LIKE • SUBSCRIBE" Pill ─────────────────────────
+        cta_box = [630, 75, 1030, 135]
+        draw.rounded_rectangle(cta_box, radius=30, fill=(14, 18, 34, 245), outline=(255, 51, 102, 230), width=2)
 
-    # Text: "LIKE • SUBSCRIBE"
-    draw.text((660, 90), "LIKE", fill=(255, 60, 110, 255), font=font_cta)
-    draw.text((740, 90), "•", fill=(255, 255, 255, 180), font=font_cta)
-    draw.text((775, 90), "SUBSCRIBE", fill=(255, 204, 0, 255), font=font_cta)
+        # Text: "LIKE • SUBSCRIBE"
+        draw.text((660, 90), "LIKE", fill=(255, 60, 110, 255), font=font_cta)
+        draw.text((740, 90), "•", fill=(255, 255, 255, 180), font=font_cta)
+        draw.text((775, 90), "SUBSCRIBE", fill=(255, 204, 0, 255), font=font_cta)
+    except Exception as e:
+        print(f"[Notice] Text rendering notice (fallback to basic overlay): {e}")
 
     img.save(output_path, "PNG")
     print(f"[OK] Transparent broadcast overlay generated: {output_path} ({width}x{height})")

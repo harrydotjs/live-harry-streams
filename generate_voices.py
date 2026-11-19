@@ -53,7 +53,7 @@ def build_announcements_loop():
         print("[Warning] No voice clips available to compile.")
         return
 
-    cmd = ["ffmpeg", "-y"]
+    cmd = ["ffmpeg", "-y", "-nostdin"]
     filter_inputs = []
     for i, clip in enumerate(available):
         cmd.extend(["-i", clip])
@@ -67,13 +67,14 @@ def build_announcements_loop():
     cmd.extend([
         "-filter_complex", filter_complex,
         "-map", "[aout]",
+        "-t", str(total_dur),
         "-c:a", "libmp3lame",
         "-b:a", "192k",
         "announcements_loop.mp3"
     ])
 
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(cmd, check=True, timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print(f"[OK] Generated repeating announcement loop: announcements_loop.mp3 ({total_dur}s)")
     except Exception as e:
         print(f"[Notice] FFmpeg announcement compilation notice: {e}")
