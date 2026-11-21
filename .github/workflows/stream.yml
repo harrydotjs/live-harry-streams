@@ -20,117 +20,14 @@ jobs:
       - name: Install FFmpeg, Xvfb, PulseAudio, Chromium
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils unclutter curl
+          sudo apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils unclutter
           if ! which google-chrome &>/dev/null && ! which chromium-browser &>/dev/null && ! which chromium &>/dev/null; then
             sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium || true
           fi
 
-      # ── Broadcast 24/7 3D Piano Live Stream to YouTube Shorts ─────────
-      - name: Run 5-Hour Live Broadcast
+      # ── Run 24/7 Python Live Stream Engine (Zero-Lag 6800 Kbps CBR) ──
+      - name: Run 5-Hour Python Live Stream
         env:
-          KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
+          STREAM_KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
         run: |
-          STREAM_KEY=$(echo "$KEY" | tr -d '[:space:]')
-          if [ -z "$STREAM_KEY" ]; then
-            echo "=========================================================================="
-            echo "::error:: STREAM_KEY secret is missing!"
-            echo "Please go to: Repository -> Settings -> Secrets and variables -> Actions"
-            echo "Create a repository secret named: STREAM_KEY with your YouTube stream key."
-            echo "=========================================================================="
-            exit 1
-          fi
-
-          echo "══════════════════════════════════════════════════════════════════════════"
-          echo "  STARTING YOUTUBE LIVE SHORTS 9:16 BROADCAST (6800 KBPS ZERO-LAG CBR)    "
-          echo "══════════════════════════════════════════════════════════════════════════"
-
-          # 1. Start PulseAudio Virtual Sink for audio capture
-          export XDG_RUNTIME_DIR=/tmp/pulse-runtime
-          mkdir -p "$XDG_RUNTIME_DIR"
-          chmod 700 "$XDG_RUNTIME_DIR"
-          pulseaudio --daemonize=no --exit-idle-time=-1 \
-            --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulseaudio.socket" \
-            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" > /tmp/pulse.log 2>&1 &
-          sleep 2
-          pactl --server=unix:/tmp/pulseaudio.socket set-default-sink virtual_out
-          export PULSE_SERVER=unix:/tmp/pulseaudio.socket
-          echo "[✓] PulseAudio virtual audio sink ready."
-
-          # 2. Start Local HTTP Server with health check
-          python3 server.py > /tmp/server.log 2>&1 &
-          sleep 2
-          curl -s -I http://127.0.0.1:8080/index.html | head -n 1
-          echo "[✓] Local HTTP server responding on port 8080."
-
-          # 3. Start Xvfb Virtual Screen (1080x1920 9:16 Shorts)
-          Xvfb :99 -screen 0 1080x1920x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
-          sleep 2
-          export DISPLAY=:99
-          unclutter -idle 0 -root &
-          echo "[✓] Xvfb 1080x1920 virtual screen active."
-
-          # 4. Launch Chromium with WebGL SwiftShader & Autoplay
-          BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
-          echo "[✓] Launching browser: $BROWSER"
-
-          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
-          $BROWSER \
-            --no-sandbox \
-            --disable-dev-shm-usage \
-            --enable-webgl \
-            --ignore-gpu-blocklist \
-            --use-gl=angle \
-            --use-angle=swiftshader \
-            --enable-gpu-rasterization \
-            --enable-zero-copy \
-            --disable-gpu-vsync \
-            --kiosk \
-            --hide-scrollbars \
-            --window-size=1080,1920 \
-            --window-position=0,0 \
-            --autoplay-policy=no-user-gesture-required \
-            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints,MediaEngagementBypassAutoplayPolicies \
-            --enable-audio-focus-enforcement=false \
-            --no-first-run \
-            --disable-translate \
-            --disable-infobars \
-            --disable-notifications \
-            --disable-extensions \
-            --disable-sync \
-            --disable-breakpad \
-            --disable-background-networking \
-            --disable-background-timer-throttling \
-            --disable-renderer-backgrounding \
-            --disable-backgrounding-occluded-windows \
-            --disk-cache-dir=/tmp/chromium-cache \
-            "http://127.0.0.1:8080/index.html" > /tmp/chrome.log 2>&1 &
-          sleep 6
-
-          # 5. Broadcast to YouTube Live with Strict 6800 Kbps CBR
-          echo "Broadcasting 3D Piano to YouTube Shorts at strict 6800 Kbps CBR..."
-          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
-          timeout 18000 ffmpeg -nostdin \
-            -thread_queue_size 2048 -f x11grab -draw_mouse 0 \
-            -video_size 1080x1920 -framerate 30 -i :99.0 \
-            -thread_queue_size 2048 -f pulse -i virtual_out.monitor \
-            -c:v libx264 -preset ultrafast -tune zerolatency \
-              -profile:v high -level:v 4.1 \
-              -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 13600k \
-              -x264-params "nal-hrd=cbr:force-cfr=1" \
-              -pix_fmt yuv420p -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 192k -ar 44100 -ac 2 \
-            -threads 0 \
-            -flvflags no_duration_filesize \
-            -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
-
-          EXIT_CODE=$?
-          if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 0 ]; then
-            echo "Stream segment completed successfully."
-          else
-            echo "::error:: FFmpeg stream exited with code $EXIT_CODE"
-            echo "=== CHROME LOG ==="
-            cat /tmp/chrome.log || true
-            echo "=== SERVER LOG ==="
-            cat /tmp/server.log || true
-            exit $EXIT_CODE
-          fi
+          python3 stream.py
