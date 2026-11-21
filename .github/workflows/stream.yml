@@ -1,16 +1,7 @@
-name: 24/7 YouTube Live Video Stream with Voice Announcements
+name: 24/7 3D Piano Live Stream (YouTube Shorts 9:16)
 
 on:
   workflow_dispatch:
-    inputs:
-      video_file:
-        description: 'Uploaded video file name or direct URL (e.g. video.mp4)'
-        required: false
-        default: 'https://archive.org/download/1-hour-20-minutes-of-relaxing-minecraft-parkour-nostalgia-scenery-no-ads-bbswitzer-1080p-h-264/1%20hour%2020%20minutes%20of%20relaxing%20Minecraft%20Parkour%20%28Nostalgia%2C%20Scenery%2C%20No%20Ads%29%20-%20bbswitzer%20%281080p%2C%20h264%29.mp4'
-      start_time:
-        description: 'Start time (e.g. 50:00, 1:30, or 90). Leave empty to start from 0'
-        required: false
-        default: '0'
   schedule:
     # 2 segments × 5 hours = 10 hours/day (IST = UTC+5:30)
     - cron: '30 6 * * *'   # Segment 1: 12:00 PM IST → 5:00 PM IST
@@ -25,95 +16,75 @@ jobs:
       - name: Checkout repository files
         uses: actions/checkout@v4
 
-      # ── Install native multimedia packages & high-speed aria2 ────────
-      - name: Install FFmpeg, Python, Fonts, aria2
+      # ── Install multimedia & headless browser packages ───────────────
+      - name: Install FFmpeg, Xvfb, PulseAudio, Chromium
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg python3-pip fonts-dejavu-core aria2
+          sudo apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils unclutter
+          if ! which google-chrome &>/dev/null && ! which chromium-browser &>/dev/null && ! which chromium &>/dev/null; then
+            sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium || true
+          fi
 
-      # ── Generate Broadcaster Voices & Overlay ────────────────────────
-      - name: Generate Natural Broadcast Announcer Audio & Overlay
+      # ── Start Local Web Server for 3D Piano ──────────────────────────
+      - name: Start Local HTTP Server
         run: |
-          pip install --upgrade edge-tts pillow
-          python3 generate_voices.py || true
-          python3 generate_overlay.py overlay.png || true
-          
-          # Fallback guarantee for overlay.png
-          if [ ! -s overlay.png ]; then
-            echo "Generating clean transparent fallback overlay..."
-            ffmpeg -y -f lavfi -i color=c=black@0.0:s=1080x1920,format=rgba -vframes 1 overlay.png
-          fi
+          python3 server.py &
+          sleep 2
 
-          # Fallback guarantee for announcements_loop.mp3
-          if [ ! -s announcements_loop.mp3 ]; then
-            echo "Generating fallback announcement audio track..."
-            ffmpeg -y -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -t 300 announcements_loop.mp3
-          fi
-
-      # ── Fetch Video (Multi-threaded Turbo Download 30-50 MB/s) ───────
-      - name: Fetch Video File
+      # ── Start PulseAudio Virtual Sink (captures synthesizer audio) ────
+      - name: Start PulseAudio with virtual sink
         run: |
-          TARGET_FILE="${{ github.event.inputs.video_file || secrets.VIDEO_FILE || 'https://archive.org/download/video_20261118/video.mp4' }}"
-          echo "Target video: $TARGET_FILE"
+          export XDG_RUNTIME_DIR=/tmp/pulse-runtime
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          pulseaudio --daemonize=no --exit-idle-time=-1 \
+            --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulseaudio.socket" \
+            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" &
+          sleep 2
+          pactl --server=unix:/tmp/pulseaudio.socket set-default-sink virtual_out
+          echo "PULSE_SERVER=unix:/tmp/pulseaudio.socket" >> $GITHUB_ENV
+          echo "XDG_RUNTIME_DIR=/tmp/pulse-runtime" >> $GITHUB_ENV
 
-          if [[ "$TARGET_FILE" =~ ^https?:// ]]; then
-            echo "Detected remote video URL: $TARGET_FILE"
-            if [[ "$TARGET_FILE" =~ drive\.google\.com ]]; then
-              echo "Downloading from Google Drive via gdown..."
-              pip install --upgrade gdown
-              gdown --fuzzy "$TARGET_FILE" -O video.mp4
-            elif [[ "$TARGET_FILE" =~ dropbox\.com ]]; then
-              echo "Downloading from Dropbox..."
-              DL_URL=$(echo "$TARGET_FILE" | sed 's/[?&]dl=0/?dl=1/')
-              if [[ ! "$DL_URL" =~ dl=1 ]]; then
-                DL_URL="${DL_URL}?dl=1"
-              fi
-              aria2c -x 16 -s 16 -k 1M -j 16 --retry-wait 2 --max-tries 5 -o video.mp4 "$DL_URL" || curl -L --retry 5 -o video.mp4 "$DL_URL"
-            else
-              echo "High-speed multi-threaded download via aria2c (16 parallel connections)..."
-              aria2c -x 16 -s 16 -k 1M -j 16 --retry-wait 2 --max-tries 5 -o video.mp4 "$TARGET_FILE" || curl -L --retry 5 -o video.mp4 "$TARGET_FILE"
-            fi
-            echo "Download completed. File details:"
-            ls -lh video.mp4 || true
-          elif [ -f "$TARGET_FILE" ] && [ "$TARGET_FILE" != "video.mp4" ]; then
-            cp "$TARGET_FILE" video.mp4
-          fi
-
-          # Verify video file integrity
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 video.mp4 || true
-
-      # ── Prepare Stream Source (Start Time Seeking & Audio Validation) ─
-      - name: Prepare Stream Source
+      # ── Xvfb Virtual Screen (1080×1920 9:16 Vertical Shorts Format) ───
+      - name: Start Xvfb 1080x1920 vertical screen
         run: |
-          V_START=$(echo "${{ github.event.inputs.start_time || secrets.START_TIME || '50:00' }}" | tr -d '[:space:]')
-          echo "Requested start time: '$V_START'"
+          Xvfb :99 -screen 0 1080x1920x24 &
+          sleep 2
+          DISPLAY=:99 unclutter -idle 0 -root &
 
-          if [ -n "$V_START" ] && [ "$V_START" != "0" ] && [ "$V_START" != "00:00" ]; then
-            echo "Fast-seeking and trimming source to start from $V_START..."
-            ffmpeg -y -ss "$V_START" -i video.mp4 -c copy stream_source.mp4 || cp video.mp4 stream_source.mp4
-          else
-            echo "Streaming from beginning (0:00)..."
-            cp video.mp4 stream_source.mp4
-          fi
+      # ── Launch Chromium with 3D WebGL Piano & Autoplay ───────────────
+      - name: Launch 3D Piano in Kiosk Mode
+        run: |
+          BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
+          echo "Launching browser: $BROWSER"
 
-          # If trimmed file is empty (e.g. start time was beyond video length), fall back to original video
-          if [ ! -s stream_source.mp4 ]; then
-            echo "Notice: Trimmed file was empty (start time was beyond video length). Falling back to start from 0:00."
-            cp video.mp4 stream_source.mp4
-          fi
+          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
+          $BROWSER \
+            --no-sandbox \
+            --disable-dev-shm-usage \
+            --use-gl=angle \
+            --use-angle=swiftshader \
+            --enable-gpu-rasterization \
+            --enable-zero-copy \
+            --disable-gpu-vsync \
+            --kiosk \
+            --hide-scrollbars \
+            --window-size=1080,1920 \
+            --window-position=0,0 \
+            --autoplay-policy=no-user-gesture-required \
+            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints \
+            --enable-audio-focus-enforcement=false \
+            --no-first-run \
+            --disable-translate \
+            --disable-infobars \
+            --disable-notifications \
+            --disable-background-timer-throttling \
+            --disable-renderer-backgrounding \
+            --disable-backgrounding-occluded-windows \
+            "http://127.0.0.1:8080/index.html" &
+          sleep 6
 
-          # Verify audio stream exists; if video has no audio, add silent stereo track
-          HAS_AUDIO=$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 stream_source.mp4 || true)
-          if [ -z "$HAS_AUDIO" ]; then
-            echo "No audio stream detected in video, synthesizing silent stereo track..."
-            ffmpeg -y -i stream_source.mp4 -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v copy -c:a aac -shortest stream_source_fixed.mp4
-            mv stream_source_fixed.mp4 stream_source.mp4
-          fi
-
-          echo "Source preparation complete. Ready for broadcast!"
-          ls -lh stream_source.mp4 overlay.png announcements_loop.mp3
-
-      # ── Stream to YouTube Live (Pure C-Native Broadcast - ZERO LAG) ───
+      # ── Stream to YouTube Live (1080x1920 6800 Kbps Zero-Lag) ─────────
       - name: Stream 5 hours to YouTube
         env:
           KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
@@ -122,25 +93,18 @@ jobs:
           if [ -z "$STREAM_KEY" ]; then
             echo "=========================================================================="
             echo "::error:: STREAM_KEY secret is missing!"
-            echo "Please go to: Your GitHub Repo -> Settings -> Secrets and variables -> Actions"
-            echo "Click 'New repository secret', name it 'STREAM_KEY', and paste your YouTube Live stream key."
+            echo "Please go to: Repository -> Settings -> Secrets and variables -> Actions"
+            echo "Create a repository secret named: STREAM_KEY with your YouTube stream key."
             echo "=========================================================================="
             exit 1
           fi
 
-          echo "Starting 1080x1920 YouTube Shorts live broadcast..."
-          timeout 18000 ffmpeg -nostdin -re \
-            -stream_loop -1 -i stream_source.mp4 \
-            -loop 1 -framerate 30 -i overlay.png \
-            -stream_loop -1 -i announcements_loop.mp3 \
-            -filter_complex "\
-              [0:v]crop=ih:ih:(iw-ih)/2:0,scale=1080:1080,pad=1080:1920:0:420:black[vbase]; \
-              [1:v]format=rgba[over]; \
-              [vbase][over]overlay=0:0:eof_action=repeat[vout]; \
-              [0:a]aformat=channel_layouts=stereo:sample_rates=44100[a0]; \
-              [2:a]volume=1.4,aformat=channel_layouts=stereo:sample_rates=44100[a2]; \
-              [a0][a2]amix=inputs=2:duration=first:dropout_transition=2[aout]" \
-            -map "[vout]" -map "[aout]" \
+          echo "Broadcasting 3D Piano Live Stream to YouTube Shorts in 1080x1920..."
+          DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
+          timeout 18000 ffmpeg -nostdin \
+            -thread_queue_size 1024 -f x11grab -draw_mouse 0 \
+            -video_size 1080x1920 -framerate 30 -i :99.0 \
+            -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
             -c:v libx264 -preset ultrafast \
               -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 14000k \
               -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
@@ -151,7 +115,7 @@ jobs:
 
           EXIT_CODE=$?
           if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 0 ]; then
-            echo "Stream segment completed successfully after 5 hours."
+            echo "Stream segment completed successfully."
           else
             echo "FFmpeg exited with code $EXIT_CODE"
             exit $EXIT_CODE
