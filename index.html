@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>24/7 YouTube Live Video Stream</title>
+    <title>3D Piano Live Stream • 9:16 YouTube Shorts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&display=swap"
+        rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -21,133 +25,67 @@
             overflow: hidden;
             background: #000;
             color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* ── Vertical 9:16 YouTube Shorts Stream Canvas (1080x1920) ─────── */
-        #stream-container {
+        /* ── 9:16 Vertical Shorts Container (1080x1920) ────────────────────── */
+        #shorts-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 56.25vh;
-            /* 9:16 aspect ratio (9/16 = 56.25vh) */
+            max-width: calc(100vh * 9 / 16);
             aspect-ratio: 9 / 16;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             overflow: hidden;
-            background: #000;
-            transform: translateZ(0);
+            background: #020409;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
         }
 
-        /* Video Stage: Centers the 1:1 Square Video vertically */
-        #video-stage {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            z-index: 3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+        @media (max-aspect-ratio: 9/16) {
+            #shorts-container {
+                width: 100vw;
+                height: calc(100vw * 16 / 9);
+                max-width: none;
+            }
         }
 
-        /* ── 1:1 Square Video Frame (1080px × 1080px in 9:16 Shorts Feed) ── */
-        #player-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            /* Exact 1:1 Square Ratio */
-            max-height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: #000;
-            border: none;
-            box-shadow: none;
-            transform: translateZ(0);
-            will-change: transform;
-        }
-
-        /* Direct HTML5 Video Player inside 1:1 Frame */
-        #stream-video {
+        #webgl-canvas {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            /* Crops 16:9 widescreen into a pure 1:1 square with zero letterboxing */
-            background: #000;
-            border: none;
-            outline: none;
-            pointer-events: none !important;
-            transform: translateZ(0);
-            will-change: transform;
-            backface-visibility: hidden;
+            display: block;
         }
 
-        .fit-contain #stream-video {
-            object-fit: contain !important;
-            /* Letterboxed inside 1:1 square if requested */
-        }
-
-        /* Transparent Shield: blocks all user interaction & prevents controls */
-        #shield {
+        /* ── Minimalist LIVE Icon Only (Clean Broadcast Aesthetic) ─────────── */
+        #live-badge {
             position: absolute;
-            inset: 0;
-            z-index: 5;
-            background: transparent;
-            cursor: none !important;
-        }
-
-        /* ── Broadcast Overlays (Top & Bottom Margins of 9:16 Canvas) ──── */
-        #overlays {
-            position: absolute;
-            inset: 0;
+            top: 55px;
+            left: 24px;
             z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 80px 22px 55px 22px;
-        }
-
-        /* Top Bar: LIVE Badge & Call-To-Action */
-        .top-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            gap: 16px;
-        }
-
-        .live-tag {
-            background: #ff0044;
+            background: rgba(255, 0, 68, 0.92);
             color: #fff;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 900;
-            letter-spacing: 1.5px;
-            padding: 8px 18px;
-            border-radius: 8px;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            padding: 7px 16px;
+            border-radius: 30px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
-            text-transform: uppercase;
-            transform: translateZ(0);
+            box-shadow: 0 0 25px rgba(255, 0, 68, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            pointer-events: none;
         }
 
-        .live-tag::before {
-            content: '';
-            width: 9px;
-            height: 9px;
-            background: #fff;
+        .live-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
+            background: #fff;
             animation: pulse-dot 1.2s infinite ease-in-out;
         }
 
@@ -160,535 +98,1022 @@
             }
 
             50% {
-                opacity: 0.3;
-                transform: scale(0.7);
+                opacity: 0.35;
+                transform: scale(0.65);
             }
         }
 
-        /* Main Call to Action Pill */
-        .cta-pill {
-            background: rgba(14, 18, 32, 0.96);
-            border: 2px solid #ff3366;
-            border-radius: 50px;
-            padding: 10px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            color: #fff;
-            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
-            transform: translateZ(0);
-            will-change: transform;
-        }
-
-        .cta-pill .heart {
-            color: #ff3366;
-            font-size: 17px;
-            animation: heart-beat 1.4s infinite ease-in-out;
-            transform: translateZ(0);
-        }
-
-        .cta-pill .bell {
-            color: #ffcc00;
-            font-size: 16px;
-            animation: bell-ring 2.5s infinite ease-in-out;
-            transform: translateZ(0);
-        }
-
-        @keyframes heart-beat {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            15% {
-                transform: scale(1.3);
-            }
-
-            30% {
-                transform: scale(1);
-            }
-
-            45% {
-                transform: scale(1.2);
-            }
-        }
-
-        @keyframes bell-ring {
-
-            0%,
-            100% {
-                transform: rotate(0deg);
-            }
-
-            10% {
-                transform: rotate(16deg);
-            }
-
-            20% {
-                transform: rotate(-16deg);
-            }
-
-            30% {
-                transform: rotate(12deg);
-            }
-
-            40% {
-                transform: rotate(-12deg);
-            }
-
-            50% {
-                transform: rotate(0deg);
-            }
-        }
-
-        /* Floating Reaction Emojis */
-        .reaction-container {
+        /* ── Absolute Bottom Animated GIF Badge (Continuous, White Border & Rounded Corners) ── */
+        #bottom-gif-card {
             position: absolute;
-            right: 40px;
-            bottom: 110px;
-            width: 80px;
-            height: 350px;
-            pointer-events: none;
-            overflow: visible;
-        }
-
-        .floating-heart {
-            position: absolute;
-            bottom: 0;
-            font-size: 26px;
-            animation: float-up 3.5s ease-out forwards;
-            opacity: 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-            transform: translateZ(0);
-            will-change: transform, opacity;
-        }
-
-        @keyframes float-up {
-            0% {
-                transform: translate3d(0, 0, 0) scale(0.6) rotate(0deg);
-                opacity: 0;
-            }
-
-            15% {
-                opacity: 1;
-                transform: translate3d(0, -40px, 0) scale(1.1) rotate(-8deg);
-            }
-
-            80% {
-                opacity: 0.9;
-            }
-
-            100% {
-                transform: translate3d(0, -320px, 0) scale(1.3) rotate(20deg);
-                opacity: 0;
-            }
-        }
-
-        /* Bottom Engaging Banner */
-        .bottom-banner {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            margin-bottom: 8px;
-        }
-
-        .engagement-card {
-            background: rgba(14, 18, 34, 0.96);
-            border: 1.5px solid rgba(255, 60, 110, 0.6);
-            border-radius: 18px;
-            padding: 12px 28px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.7);
-            transform: translateZ(0);
-            transition: transform 0.3s ease;
-        }
-
-        .engagement-card.highlight {
-            animation: highlight-pulse 1.8s infinite;
-        }
-
-        @keyframes highlight-pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.03);
-            }
-        }
-
-        .banner-icon {
-            font-size: 30px;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            max-width: min(240px, 48%);
+            max-height: 180px;
+            border: 3.5px solid #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.85), 0 0 20px rgba(255, 255, 255, 0.35);
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
         }
 
-        .banner-text {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .banner-title {
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            color: #fff;
-            text-transform: uppercase;
-        }
-
-        .banner-title span {
-            color: #ff3366;
-        }
-
-        .banner-sub {
-            font-size: 13px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.8);
-            letter-spacing: 0.3px;
-        }
-
-        .banner-sub span {
-            color: #ffcc00;
-            font-weight: 700;
+        #bottom-gif-card video,
+        #bottom-gif-card img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 16px;
         }
     </style>
 </head>
 
 <body>
-    <div id="stream-container">
-        <!-- Video Stage (Centers the 1:1 Square Video) -->
-        <div id="video-stage">
-            <div id="player-wrapper">
-                <video id="stream-video" playsinline autoplay loop preload="auto">
-                </video>
-                <!-- Click shield prevents player controls & interaction -->
-                <div id="shield"></div>
-            </div>
+    <div id="shorts-container">
+        <!-- 3D Three.js WebGL Canvas -->
+        <canvas id="webgl-canvas"></canvas>
+
+        <!-- Only the LIVE Badge -->
+        <div id="live-badge">
+            <span class="live-dot"></span>LIVE
         </div>
 
-        <!-- Broadcast Overlays -->
-        <div id="overlays">
-            <!-- Top Status Row -->
-            <div class="top-row">
-                <div class="live-tag">LIVE</div>
-                <div class="cta-pill" id="topCta">
-                    <span class="heart">❤️</span>
-                    <span>LIKE</span>
-                    <span class="bell">🔔</span>
-                    <span>SUBSCRIBE</span>
-                </div>
-            </div>
-
-            <!-- Reaction Hearts Animation -->
-            <div class="reaction-container" id="reactionBox"></div>
-
-
-
+        <!-- Bottom Animated GIF / Video Badge with White Border & Rounded Corners -->
+        <div id="bottom-gif-card">
+            <video id="gif-video" autoplay loop muted playsinline>
+                <source src="mygif.mp4" type="video/mp4">
+                <source src="mygif.gif" type="video/mp4">
+            </video>
+            <img id="gif-img" src="mygif.gif" alt="GIF Animation" style="display: none;">
         </div>
     </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         'use strict';
 
-        // ═══════════════════════════════════════════════════════════════
-        // 1. CONFIGURATION (DEFAULT VIDEO FILE + START TIME)
-        // ═══════════════════════════════════════════════════════════════
-        // Direct video link from Archive.org or local file
-        const DEFAULT_VIDEO_FILE = 'https://archive.org/download/1-hour-20-minutes-of-relaxing-minecraft-parkour-nostalgia-scenery-no-ads-bbswitzer-1080p-h-264/1%20hour%2020%20minutes%20of%20relaxing%20Minecraft%20Parkour%20%28Nostalgia%2C%20Scenery%2C%20No%20Ads%29%20-%20bbswitzer%20%281080p%2C%20h264%29.mp4';
-
-        // Default starting timestamp: in seconds or mm:ss format (e.g. 0, 90, '1:30', '3:00')
-        const DEFAULT_START_TIME = '0';
-
-        // Helper: converts seconds, '1:30', '01:15:30', or '2m15s' into integer seconds
-        function parseTimeToSeconds(timeVal) {
-            if (!timeVal) return 0;
-            if (typeof timeVal === 'number') return Math.max(0, timeVal);
-            timeVal = String(timeVal).trim().toLowerCase();
-
-            if (/^\d+(\.\d+)?$/.test(timeVal)) return parseFloat(timeVal);
-            if (/[hms]/.test(timeVal)) {
-                let total = 0;
-                const h = timeVal.match(/(\d+)h/);
-                const m = timeVal.match(/(\d+)m/);
-                const s = timeVal.match(/(\d+)s/);
-                if (h) total += parseInt(h[1], 10) * 3600;
-                if (m) total += parseInt(m[1], 10) * 60;
-                if (s) total += parseInt(s[1], 10);
-                return total;
+        // ═══════════════════════════════════════════════════════════════════════
+        // 1. ACOUSTIC PIANO WEB AUDIO SYNTHESIZER (POLYPHONIC STRING MODELING)
+        // ═══════════════════════════════════════════════════════════════════════
+        class PianoAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.reverbNode = null;
+                this.compressor = null;
+                this.volume = 0.9;
+                this.initialized = false;
             }
-            if (timeVal.includes(':')) {
-                const parts = timeVal.split(':').map(Number);
-                if (parts.length === 2) return (parts[0] * 60) + parts[1];
-                if (parts.length === 3) return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+
+            init() {
+                if (this.initialized) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+
+                // Master Dynamics Compressor
+                this.compressor = this.ctx.createDynamicsCompressor();
+                this.compressor.threshold.setValueAtTime(-18, this.ctx.currentTime);
+                this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
+                this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
+                this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+                this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
+
+                // Master Gain
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+
+                // Algorithmic Concert Hall Reverb
+                this.createConcertReverb();
+
+                this.compressor.connect(this.masterGain);
+                this.masterGain.connect(this.ctx.destination);
+
+                this.initialized = true;
             }
-            return parseFloat(timeVal) || 0;
-        }
 
-        const params = new URLSearchParams(window.location.search);
-        let VIDEO_SRC = params.get('v') || params.get('video') || params.get('src') || DEFAULT_VIDEO_FILE;
-        const rawTime = params.get('t') || params.get('start') || DEFAULT_START_TIME;
-        const START_TIME = parseTimeToSeconds(rawTime);
-        const FIT_MODE = params.get('fit') || 'cover'; // Default 'cover' crops 16:9 to fill 1:1 square
-        const ANNOUNCE_INTERVAL = Math.max(25, Number(params.get('interval')) || 60);
-
-        if (FIT_MODE === 'contain') {
-            document.getElementById('player-wrapper').classList.add('fit-contain');
-        }
-
-        console.log(`[Stream Player] Loading video: ${VIDEO_SRC} | Starting at: ${START_TIME}s`);
-
-        // ═══════════════════════════════════════════════════════════════
-        // 2. DIRECT HTML5 VIDEO PLAYER (ZERO CONTROLS, AUTONOMOUS AUTO-LOOP)
-        // ═══════════════════════════════════════════════════════════════
-        const videoEl = document.getElementById('stream-video');
-
-        // Apply HTML5 Media Fragment directly so browser buffers from START_TIME from the very first byte
-        if (START_TIME > 0 && !VIDEO_SRC.includes('#t=')) {
-            videoEl.src = `${VIDEO_SRC}#t=${START_TIME}`;
-        } else {
-            videoEl.src = VIDEO_SRC;
-        }
-
-        // Auto fallback: if local file is missing, stream directly from archive.org
-        videoEl.addEventListener('error', () => {
-            if (!videoEl.src.includes('archive.org')) {
-                console.warn('[Stream Player] Local video not found, streaming from archive.org:', DEFAULT_VIDEO_FILE);
-                VIDEO_SRC = DEFAULT_VIDEO_FILE;
-                videoEl.src = START_TIME > 0 ? `${DEFAULT_VIDEO_FILE}#t=${START_TIME}` : DEFAULT_VIDEO_FILE;
-                startPlayback();
-            }
-        });
-
-        let seekConfirmed = false;
-        let isSeeking = false;
-
-        function applyStartTime() {
-            if (START_TIME <= 0 || seekConfirmed || isSeeking) return;
-
-            if (videoEl.readyState >= 1) { // HAVE_METADATA or higher
-                if (videoEl.currentTime >= START_TIME - 1.0) {
-                    seekConfirmed = true;
-                    console.log(`[Stream Player] Start time confirmed at: ${videoEl.currentTime.toFixed(2)}s`);
-                    return;
-                }
-
-                try {
-                    isSeeking = true;
-                    console.log(`[Stream Player] Applying start time: ${START_TIME}s (current: ${videoEl.currentTime.toFixed(2)}s)`);
-                    videoEl.currentTime = START_TIME;
-                } catch (e) {
-                    isSeeking = false;
-                    console.warn('[Stream Player] Seek notice:', e);
+            unlock() {
+                this.init();
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
                 }
             }
-        }
 
-        videoEl.addEventListener('seeked', () => {
-            isSeeking = false;
-            if (videoEl.currentTime >= START_TIME - 1.0) {
-                seekConfirmed = true;
-                console.log(`[Stream Player] Seek completed at: ${videoEl.currentTime.toFixed(2)}s`);
+            createConcertReverb() {
+                const length = this.ctx.sampleRate * 2.2;
+                const impulse = this.ctx.createBuffer(2, length, this.ctx.sampleRate);
+                const left = impulse.getChannelData(0);
+                const right = impulse.getChannelData(1);
+
+                for (let i = 0; i < length; i++) {
+                    const decay = Math.exp(-i / (this.ctx.sampleRate * 0.75));
+                    left[i] = (Math.random() * 2 - 1) * decay;
+                    right[i] = (Math.random() * 2 - 1) * decay;
+                }
+
+                this.reverbNode = this.ctx.createConvolver();
+                this.reverbNode.buffer = impulse;
+
+                const reverbGain = this.ctx.createGain();
+                reverbGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+
+                this.reverbNode.connect(reverbGain);
+                reverbGain.connect(this.compressor);
             }
-        });
 
-        ['loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough'].forEach(ev => {
-            videoEl.addEventListener(ev, applyStartTime);
-        });
+            midiToFreq(midi) {
+                return 440 * Math.pow(2, (midi - 69) / 12);
+            }
 
-        // Timeupdate safety lock: if video plays before seek takes effect, ensure it jumps to START_TIME once
-        videoEl.addEventListener('timeupdate', () => {
-            if (!seekConfirmed && START_TIME > 0 && !isSeeking && !videoEl.seeking) {
-                if (videoEl.currentTime < START_TIME - 1.0) {
-                    applyStartTime();
+            playNote(midi, duration = 1.0, velocity = 0.85) {
+                if (!this.initialized) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const freq = this.midiToFreq(midi);
+                const now = this.ctx.currentTime;
+                const dur = Math.max(0.2, duration);
+
+                // Acoustic Panning: Bass notes panned slightly left, Treble slightly right
+                const panVal = Math.max(-0.4, Math.min(0.4, (midi - 60) / 40));
+                let panner = null;
+                if (this.ctx.createStereoPanner) {
+                    panner = this.ctx.createStereoPanner();
+                    panner.pan.setValueAtTime(panVal, now);
+                }
+
+                const noteGain = this.ctx.createGain();
+                const velFactor = Math.pow(velocity, 1.3);
+
+                // Attack -> Decay -> Sustain -> Release Envelope
+                noteGain.gain.setValueAtTime(0.0001, now);
+                noteGain.gain.exponentialRampToValueAtTime(0.9 * velFactor, now + 0.004);
+                noteGain.gain.exponentialRampToValueAtTime(0.42 * velFactor, now + 0.15);
+                noteGain.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.6);
+
+                // Harmonic overtone synthesis (True acoustic string harmonics)
+                const harmonics = [
+                    { ratio: 1.0, gain: 0.65 },
+                    { ratio: 2.0, gain: 0.28 },
+                    { ratio: 3.0, gain: 0.14 },
+                    { ratio: 4.0, gain: 0.06 }
+                ];
+
+                harmonics.forEach(h => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = h.ratio === 1.0 ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(freq * h.ratio, now);
+
+                    const hGain = this.ctx.createGain();
+                    hGain.gain.setValueAtTime(h.gain, now);
+                    hGain.gain.exponentialRampToValueAtTime(0.0001, now + (dur / h.ratio) + 0.4);
+
+                    osc.connect(hGain);
+                    hGain.connect(noteGain);
+
+                    osc.start(now);
+                    osc.stop(now + dur + 0.7);
+                });
+
+                // Hammer strike felt noise transient
+                const bufferSize = this.ctx.sampleRate * 0.025;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.005));
+                }
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(Math.min(1800, freq * 1.8), now);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.18 * velFactor, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+
+                whiteNoise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(noteGain);
+
+                whiteNoise.start(now);
+
+                // Routing to compressor & reverb
+                if (panner) {
+                    noteGain.connect(panner);
+                    panner.connect(this.compressor);
+                    if (this.reverbNode) panner.connect(this.reverbNode);
                 } else {
-                    seekConfirmed = true;
-                    console.log(`[Stream Player] Seek verified on playback: ${videoEl.currentTime.toFixed(2)}s`);
+                    noteGain.connect(this.compressor);
+                    if (this.reverbNode) noteGain.connect(this.reverbNode);
                 }
             }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 2. PROCEDURAL 24/7 ORIGINAL PIANO ENGINE (100% COPYRIGHT-FREE & UNIQUE)
+        // ═══════════════════════════════════════════════════════════════════════
+        class ProceduralPianoEngine {
+            constructor() {
+                this.themes = [
+                    {
+                        name: "Ethereal Moonlight",
+                        key: 57, // A minor
+                        mode: "minor",
+                        bpm: 78,
+                        chords: [
+                            { root: 45, isMajor: false, third: 3 }, // Am
+                            { root: 41, isMajor: true, third: 4 }, // F
+                            { root: 48, isMajor: true, third: 4 }, // C
+                            { root: 43, isMajor: true, third: 4 }  // G
+                        ]
+                    },
+                    {
+                        name: "Whispering Rain",
+                        key: 50, // D minor
+                        mode: "minor",
+                        bpm: 74,
+                        chords: [
+                            { root: 50, isMajor: false, third: 3 }, // Dm
+                            { root: 46, isMajor: true, third: 4 }, // Bb
+                            { root: 41, isMajor: true, third: 4 }, // F
+                            { root: 48, isMajor: true, third: 4 }  // C
+                        ]
+                    },
+                    {
+                        name: "Eternal Dawn",
+                        key: 48, // C major
+                        mode: "major",
+                        bpm: 84,
+                        chords: [
+                            { root: 48, isMajor: true, third: 4 }, // C
+                            { root: 43, isMajor: true, third: 4 }, // G
+                            { root: 45, isMajor: false, third: 3 }, // Am
+                            { root: 41, isMajor: true, third: 4 }  // F
+                        ]
+                    },
+                    {
+                        name: "Midnight Solitude",
+                        key: 52, // E minor
+                        mode: "minor",
+                        bpm: 72,
+                        chords: [
+                            { root: 40, isMajor: false, third: 3 }, // Em
+                            { root: 50, isMajor: true, third: 4 }, // D
+                            { root: 48, isMajor: true, third: 4 }, // C
+                            { root: 50, isMajor: true, third: 4 }  // D
+                        ]
+                    },
+                    {
+                        name: "Nostalgic Road",
+                        key: 53, // F major
+                        mode: "major",
+                        bpm: 80,
+                        chords: [
+                            { root: 46, isMajor: true, third: 4 }, // Bb
+                            { root: 48, isMajor: true, third: 4 }, // C
+                            { root: 45, isMajor: false, third: 3 }, // Am
+                            { root: 50, isMajor: false, third: 3 }  // Dm
+                        ]
+                    },
+                    {
+                        name: "Starlight Reverie",
+                        key: 55, // G major
+                        mode: "major",
+                        bpm: 86,
+                        chords: [
+                            { root: 43, isMajor: true, third: 4 }, // G
+                            { root: 40, isMajor: false, third: 3 }, // Em
+                            { root: 48, isMajor: true, third: 4 }, // C
+                            { root: 43, isMajor: true, third: 4 }  // D
+                        ]
+                    },
+                    {
+                        name: "Serenade of the Sea",
+                        key: 47, // B minor
+                        mode: "minor",
+                        bpm: 70,
+                        chords: [
+                            { root: 47, isMajor: false, third: 3 }, // Bm
+                            { root: 45, isMajor: true, third: 4 }, // A
+                            { root: 43, isMajor: true, third: 4 }, // G
+                            { root: 45, isMajor: true, third: 4 }  // A
+                        ]
+                    },
+                    {
+                        name: "Lyrical Waltz",
+                        key: 51, // Eb major
+                        mode: "major",
+                        bpm: 80,
+                        chords: [
+                            { root: 51, isMajor: true, third: 4 }, // Eb
+                            { root: 44, isMajor: true, third: 4 }, // Ab
+                            { root: 46, isMajor: true, third: 4 }, // Bb
+                            { root: 51, isMajor: true, third: 4 }  // Eb
+                        ]
+                    }
+                ];
+
+                this.themeIndex = 0;
+                this.barIndex = 0;
+                this.totalBarsInTheme = 12; // 12 bars per movement (~35-45s)
+                this.pendingNotes = [];     // upcoming notes waiting to be spawned into waterfall
+                this.timelineHead = 0;      // seconds up to which musical bars have been planned
+                this.streamTime = 0;        // current playback time in seconds
+                this.lookaheadSec = 2.0;
+
+                this.setupNewTheme(0);
+            }
+
+            clampMidi(m) {
+                while (m < 36) m += 12;
+                while (m > 96) m -= 12;
+                return m;
+            }
+
+            setupNewTheme(idx) {
+                this.themeIndex = (idx + this.themes.length) % this.themes.length;
+                this.barIndex = 0;
+            }
+
+            generateNextBar() {
+                const theme = this.themes[this.themeIndex];
+                const secPerBeat = 60 / theme.bpm;
+                const barDuration = 4.0 * secPerBeat;
+                const chordIdx = this.barIndex % theme.chords.length;
+                const chord = theme.chords[chordIdx];
+                const isFinalBar = (this.barIndex === this.totalBarsInTheme - 1);
+
+                const barStartTime = this.timelineHead;
+                const notes = [];
+
+                // ── LEFT HAND (BASS & ARPEGGIOS) ──────────────────────────────
+                const bassRoot = this.clampMidi(chord.root);
+                const third = chord.third;
+
+                if (isFinalBar) {
+                    // Final Cadence Resolution Chord
+                    notes.push({ midi: bassRoot, dur: 3.0 * secPerBeat, beatOffset: 0, hand: 'L', vel: 0.82 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 12), dur: 3.0 * secPerBeat, beatOffset: 0, hand: 'L', vel: 0.70 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 12 + third), dur: 2.8 * secPerBeat, beatOffset: 0.5, hand: 'L', vel: 0.65 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 19), dur: 2.8 * secPerBeat, beatOffset: 1.0, hand: 'L', vel: 0.65 });
+                } else if (this.barIndex % 2 === 0) {
+                    // Flowing Arpeggio Style (8th notes across 4 beats)
+                    const arpPattern = [
+                        { beat: 0.0, offset: 0, dur: 0.7, vel: 0.76 },
+                        { beat: 0.5, offset: 7, dur: 0.5, vel: 0.56 },
+                        { beat: 1.0, offset: 12, dur: 0.5, vel: 0.60 },
+                        { beat: 1.5, offset: 12 + third, dur: 0.5, vel: 0.58 },
+                        { beat: 2.0, offset: 19, dur: 0.6, vel: 0.64 },
+                        { beat: 2.5, offset: 12 + third, dur: 0.5, vel: 0.58 },
+                        { beat: 3.0, offset: 12, dur: 0.5, vel: 0.60 },
+                        { beat: 3.5, offset: 7, dur: 0.5, vel: 0.56 }
+                    ];
+                    arpPattern.forEach(p => {
+                        notes.push({
+                            midi: this.clampMidi(bassRoot + p.offset),
+                            dur: p.dur * secPerBeat,
+                            beatOffset: p.beat,
+                            hand: 'L',
+                            vel: p.vel
+                        });
+                    });
+                } else {
+                    // Warm Ballad Stride Style
+                    notes.push({ midi: bassRoot, dur: 2.0 * secPerBeat, beatOffset: 0.0, hand: 'L', vel: 0.78 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 12), dur: 2.0 * secPerBeat, beatOffset: 0.0, hand: 'L', vel: 0.65 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 7), dur: 0.8 * secPerBeat, beatOffset: 1.5, hand: 'L', vel: 0.52 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 12 + third), dur: 1.6 * secPerBeat, beatOffset: 2.0, hand: 'L', vel: 0.62 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 19), dur: 1.6 * secPerBeat, beatOffset: 2.0, hand: 'L', vel: 0.58 });
+                    notes.push({ midi: this.clampMidi(bassRoot + 14), dur: 0.6 * secPerBeat, beatOffset: 3.5, hand: 'L', vel: 0.50 });
+                }
+
+                // ── RIGHT HAND (CANTABILE MELODY) ─────────────────────────────
+                const melodyOctave = 60 + (chord.root % 12);
+                const chordTones = [
+                    melodyOctave,
+                    melodyOctave + third,
+                    melodyOctave + 7,
+                    melodyOctave + 12,
+                    melodyOctave + 12 + third,
+                    melodyOctave + 14, // 9th extension (sweet neo-classical color)
+                    melodyOctave + 19
+                ].map(m => this.clampMidi(m));
+
+                if (isFinalBar) {
+                    // Resolve peacefully on tonic melody
+                    notes.push({
+                        midi: this.clampMidi(chordTones[3] || chordTones[0]),
+                        dur: 3.2 * secPerBeat,
+                        beatOffset: 0.0,
+                        hand: 'R',
+                        vel: 0.90
+                    });
+                    notes.push({
+                        midi: this.clampMidi(chordTones[2] || chordTones[1]),
+                        dur: 2.8 * secPerBeat,
+                        beatOffset: 0.5,
+                        hand: 'R',
+                        vel: 0.80
+                    });
+                } else {
+                    // Expressive Melodic Phrasing
+                    const phraseStep = this.barIndex % 4;
+                    let rOffsets = [];
+
+                    if (phraseStep === 0) {
+                        // Statement
+                        rOffsets = [
+                            { beat: 0.0, dur: 1.5, idx: 2, vel: 0.92 },
+                            { beat: 1.5, dur: 0.5, idx: 1, vel: 0.82 },
+                            { beat: 2.0, dur: 1.0, idx: 3, vel: 0.88 },
+                            { beat: 3.0, dur: 1.0, idx: 4, vel: 0.86 }
+                        ];
+                    } else if (phraseStep === 1) {
+                        // Response / Variation
+                        rOffsets = [
+                            { beat: 0.0, dur: 1.0, idx: 3, vel: 0.90 },
+                            { beat: 1.0, dur: 0.5, idx: 4, vel: 0.84 },
+                            { beat: 1.5, dur: 0.5, idx: 3, vel: 0.82 },
+                            { beat: 2.0, dur: 1.5, idx: 2, vel: 0.88 },
+                            { beat: 3.5, dur: 0.5, idx: 1, vel: 0.80 }
+                        ];
+                    } else if (phraseStep === 2) {
+                        // Emotional Climax (Higher register)
+                        rOffsets = [
+                            { beat: 0.0, dur: 1.0, idx: 4, vel: 0.94 },
+                            { beat: 1.0, dur: 0.5, idx: 5, vel: 0.92 },
+                            { beat: 1.5, dur: 0.5, idx: 4, vel: 0.88 },
+                            { beat: 2.0, dur: 1.0, idx: 3, vel: 0.90 },
+                            { beat: 3.0, dur: 1.0, idx: 2, vel: 0.85 }
+                        ];
+                    } else {
+                        // Resolution Cadence
+                        rOffsets = [
+                            { beat: 0.0, dur: 2.0, idx: 2, vel: 0.90 },
+                            { beat: 2.0, dur: 1.0, idx: 1, vel: 0.84 },
+                            { beat: 3.0, dur: 1.0, idx: 0, vel: 0.88 }
+                        ];
+                    }
+
+                    rOffsets.forEach(p => {
+                        const noteMidi = chordTones[p.idx % chordTones.length];
+                        notes.push({
+                            midi: noteMidi,
+                            dur: p.dur * secPerBeat,
+                            beatOffset: p.beat,
+                            hand: 'R',
+                            vel: p.vel
+                        });
+                    });
+                }
+
+                // Add to pending notes with absolute strike timestamps
+                notes.forEach(n => {
+                    this.pendingNotes.push({
+                        midi: n.midi,
+                        dur: n.dur,
+                        strikeTime: barStartTime + n.beatOffset * secPerBeat,
+                        hand: n.hand,
+                        vel: n.vel
+                    });
+                });
+
+                // Advance bar
+                this.barIndex++;
+                if (this.barIndex >= this.totalBarsInTheme) {
+                    // Natural breath pause of 0.9s (< 2 sec) before next theme starts
+                    const breathPauseSec = 0.9;
+                    this.timelineHead += barDuration + breathPauseSec;
+                    this.setupNewTheme(this.themeIndex + 1);
+                } else {
+                    this.timelineHead += barDuration;
+                }
+            }
+
+            update(delta, travelTime, onSpawnNote) {
+                this.streamTime += delta;
+
+                // Keep planning bars ahead into the timeline
+                while (this.timelineHead < this.streamTime + travelTime + this.lookaheadSec) {
+                    this.generateNextBar();
+                }
+
+                // Spawn notes whose departure time has arrived
+                for (let i = this.pendingNotes.length - 1; i >= 0; i--) {
+                    const n = this.pendingNotes[i];
+                    if (this.streamTime >= n.strikeTime - travelTime) {
+                        onSpawnNote(n.midi, n.dur, n.hand, n.vel);
+                        this.pendingNotes.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 3. THREE.JS 3D STAGE & PIANO KEYBOARD IN 9:16 VERTICAL CANVAS
+        // ═══════════════════════════════════════════════════════════════════════
+        const container = document.getElementById('shorts-container');
+        const canvas = document.getElementById('webgl-canvas');
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            powerPreference: 'high-performance'
         });
 
-        // Instant autonomous playback
-        function startPlayback() {
-            applyStartTime();
-            const playPromise = videoEl.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(err => {
-                    console.warn('[Stream Player] Autoplay with audio restricted, resuming muted first:', err);
-                    videoEl.muted = true;
-                    videoEl.play().catch(() => { });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020409);
+        scene.fog = new THREE.FogExp2(0x020409, 0.018);
+
+        // Vertical 9:16 Camera framing - optimized for YouTube Shorts portrait viewing
+        const camera = new THREE.PerspectiveCamera(
+            64, // Optimal vertical FOV for framing full 61 keys + falling notes waterfall
+            container.clientWidth / container.clientHeight,
+            0.1,
+            140
+        );
+
+        // ── Concert Lighting ─────────────────────────────────────────────────
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        // Overhead Spotlight onto Keys
+        const spotLight = new THREE.SpotLight(0xffffff, 2.4);
+        spotLight.position.set(0, 30, 15);
+        spotLight.angle = Math.PI / 4;
+        spotLight.penumbra = 0.6;
+        spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = 2048;
+        spotLight.shadow.mapSize.height = 2048;
+        spotLight.shadow.bias = -0.0001;
+        scene.add(spotLight);
+
+        // Dynamic Accent Rim Lights (Electric Cyan & Neon Magenta)
+        const cyanRim = new THREE.PointLight(0x00dfd8, 1.8, 40);
+        cyanRim.position.set(-16, 10, -5);
+        scene.add(cyanRim);
+
+        const magentaRim = new THREE.PointLight(0xff0077, 1.8, 40);
+        magentaRim.position.set(16, 10, -5);
+        scene.add(magentaRim);
+
+        // Reflective Glossy Floor
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x04060d,
+            roughness: 0.25,
+            metalness: 0.7
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -2.2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // ── 61-Key Grand Piano Construction (C2 to C7) ──────────────────────
+        const START_MIDI = 36; // C2
+        const NUM_KEYS = 61;
+
+        const WHITE_KEY_WIDTH = 0.58;
+        const WHITE_KEY_LENGTH = 3.6;
+        const WHITE_KEY_HEIGHT = 0.55;
+
+        const BLACK_KEY_WIDTH = 0.34;
+        const BLACK_KEY_LENGTH = 2.2;
+        const BLACK_KEY_HEIGHT = 0.5;
+
+        const isBlackKey = [false, true, false, true, false, false, true, false, true, false, true, false];
+
+        const pianoGroup = new THREE.Group();
+        scene.add(pianoGroup);
+
+        const whiteKeyMaterial = new THREE.MeshStandardMaterial({
+            color: 0xfbf9f6,
+            roughness: 0.18,
+            metalness: 0.12
+        });
+
+        const blackKeyMaterial = new THREE.MeshStandardMaterial({
+            color: 0x101012,
+            roughness: 0.35,
+            metalness: 0.8
+        });
+
+        const activeWhiteMaterial = new THREE.MeshStandardMaterial({
+            color: 0x00dfd8,
+            emissive: 0x00dfd8,
+            emissiveIntensity: 0.7,
+            roughness: 0.1
+        });
+
+        const activeBlackMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0077,
+            emissive: 0xff0077,
+            emissiveIntensity: 0.8,
+            roughness: 0.1
+        });
+
+        const keyMeshes = new Map();
+
+        let whiteKeyCount = 0;
+        for (let i = 0; i < NUM_KEYS; i++) {
+            const midi = START_MIDI + i;
+            if (!isBlackKey[midi % 12]) whiteKeyCount++;
+        }
+
+        const keyboardWidth = whiteKeyCount * WHITE_KEY_WIDTH;
+        const startX = -keyboardWidth / 2 + WHITE_KEY_WIDTH / 2;
+
+        let curWhiteIndex = 0;
+        for (let i = 0; i < NUM_KEYS; i++) {
+            const midi = START_MIDI + i;
+            const black = isBlackKey[midi % 12];
+
+            if (!black) {
+                const pivot = new THREE.Group();
+                const xPos = startX + curWhiteIndex * WHITE_KEY_WIDTH;
+                pivot.position.set(xPos, 0, -WHITE_KEY_LENGTH / 2);
+
+                const geo = new THREE.BoxGeometry(WHITE_KEY_WIDTH * 0.94, WHITE_KEY_HEIGHT, WHITE_KEY_LENGTH);
+                const mesh = new THREE.Mesh(geo, whiteKeyMaterial);
+                mesh.position.set(0, 0, WHITE_KEY_LENGTH / 2);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                pivot.add(mesh);
+                pianoGroup.add(pivot);
+
+                keyMeshes.set(midi, {
+                    mesh,
+                    pivot,
+                    isBlack: false,
+                    baseMat: whiteKeyMaterial,
+                    activeMat: activeWhiteMaterial,
+                    x: xPos,
+                    isPressed: false
+                });
+
+                curWhiteIndex++;
+            }
+        }
+
+        curWhiteIndex = 0;
+        for (let i = 0; i < NUM_KEYS; i++) {
+            const midi = START_MIDI + i;
+            const black = isBlackKey[midi % 12];
+
+            if (!black) {
+                curWhiteIndex++;
+            } else {
+                const pivot = new THREE.Group();
+                const xPos = startX + (curWhiteIndex - 0.5) * WHITE_KEY_WIDTH;
+                pivot.position.set(xPos, WHITE_KEY_HEIGHT * 0.5, -WHITE_KEY_LENGTH / 2);
+
+                const geo = new THREE.BoxGeometry(BLACK_KEY_WIDTH, BLACK_KEY_HEIGHT, BLACK_KEY_LENGTH);
+                const mesh = new THREE.Mesh(geo, blackKeyMaterial);
+                mesh.position.set(0, BLACK_KEY_HEIGHT / 2, BLACK_KEY_LENGTH / 2);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                pivot.add(mesh);
+                pianoGroup.add(pivot);
+
+                keyMeshes.set(midi, {
+                    mesh,
+                    pivot,
+                    isBlack: true,
+                    baseMat: blackKeyMaterial,
+                    activeMat: activeBlackMaterial,
+                    x: xPos,
+                    isPressed: false
                 });
             }
         }
 
-        startPlayback();
-
-        // Progressive autonomous un-muting
-        videoEl.addEventListener('playing', () => {
-            applyStartTime();
-            setTimeout(() => {
-                try {
-                    videoEl.muted = false;
-                    videoEl.volume = 1.0;
-                } catch (e) { }
-            }, 500);
+        // Piano Casing Elements
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x07090f,
+            roughness: 0.15,
+            metalness: 0.35
         });
 
-        // Auto-loop when video reaches the end (restarts at START_TIME)
-        videoEl.addEventListener('ended', () => {
-            try {
-                seekConfirmed = false;
-                videoEl.currentTime = START_TIME > 0 ? START_TIME : 0;
-                videoEl.play();
-            } catch (e) { }
+        // Top Fallboard block
+        const fallboardGeo = new THREE.BoxGeometry(keyboardWidth + 1.2, 2.4, 2.5);
+        const fallboard = new THREE.Mesh(fallboardGeo, bodyMat);
+        fallboard.position.set(0, 0.9, -WHITE_KEY_LENGTH / 2 - 1.2);
+        fallboard.castShadow = true;
+        pianoGroup.add(fallboard);
+
+        // Red Felt Strip
+        const feltMat = new THREE.MeshStandardMaterial({ color: 0xb50025, roughness: 0.9 });
+        const feltGeo = new THREE.BoxGeometry(keyboardWidth, 0.08, 0.35);
+        const felt = new THREE.Mesh(feltGeo, feltMat);
+        felt.position.set(0, WHITE_KEY_HEIGHT * 0.52, -WHITE_KEY_LENGTH / 2 + 0.18);
+        pianoGroup.add(felt);
+
+        // Left & Right Piano Cheeks
+        const cheekGeo = new THREE.BoxGeometry(0.55, 1.8, WHITE_KEY_LENGTH + 2.5);
+        const leftCheek = new THREE.Mesh(cheekGeo, bodyMat);
+        leftCheek.position.set(-keyboardWidth / 2 - 0.28, 0.35, -0.6);
+        pianoGroup.add(leftCheek);
+
+        const rightCheek = new THREE.Mesh(cheekGeo, bodyMat);
+        rightCheek.position.set(keyboardWidth / 2 + 0.28, 0.35, -0.6);
+        pianoGroup.add(rightCheek);
+
+        // Front Lip Rail
+        const lipGeo = new THREE.BoxGeometry(keyboardWidth + 1.1, 0.8, 0.45);
+        const lip = new THREE.Mesh(lipGeo, bodyMat);
+        lip.position.set(0, -0.28, WHITE_KEY_LENGTH / 2 + 0.22);
+        pianoGroup.add(lip);
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 4. SYNTHESIA 3D WATERFALL FALLING NOTES & SPARKS
+        // ═══════════════════════════════════════════════════════════════════════
+        const noteBarGroup = new THREE.Group();
+        scene.add(noteBarGroup);
+
+        const WATERFALL_START_Y = 19;
+        const WATERFALL_TARGET_Y = 0.2;
+        const WATERFALL_START_Z = -14;
+        const WATERFALL_TARGET_Z = 0.5;
+        const NOTE_SPEED = 14;
+
+        const activeNoteBars = [];
+
+        function spawnFallingNote(midi, durationSec, hand = 'R', velocity = 0.85) {
+            const keyData = keyMeshes.get(midi);
+            if (!keyData) return;
+
+            const isRight = hand === 'R';
+            const noteColor = isRight ? 0x00dfd8 : 0xffa500;
+            const emissiveColor = isRight ? 0x0070f3 : 0xff4500;
+
+            const barWidth = keyData.isBlack ? BLACK_KEY_WIDTH * 0.9 : WHITE_KEY_WIDTH * 0.82;
+            const barLength = Math.max(0.6, durationSec * 6.5);
+
+            const geo = new THREE.BoxGeometry(barWidth, 0.25, barLength);
+            const mat = new THREE.MeshStandardMaterial({
+                color: noteColor,
+                emissive: emissiveColor,
+                emissiveIntensity: 0.95,
+                roughness: 0.2,
+                transparent: true,
+                opacity: 0.92
+            });
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(keyData.x, WATERFALL_START_Y, WATERFALL_START_Z);
+
+            noteBarGroup.add(mesh);
+
+            activeNoteBars.push({
+                mesh,
+                midi,
+                durationSec,
+                velocity,
+                hand,
+                progress: 0,
+                keyData,
+                triggered: false,
+                totalTravelTime: (WATERFALL_START_Y - WATERFALL_TARGET_Y) / NOTE_SPEED
+            });
+        }
+
+        // Particle Spark Burst System
+        const particleCount = 200;
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(particleCount * 3);
+        const pVel = new Float32Array(particleCount * 3);
+        const pLife = new Float32Array(particleCount);
+
+        for (let i = 0; i < particleCount; i++) {
+            pLife[i] = -1;
+        }
+
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const pMat = new THREE.PointsMaterial({
+            size: 0.38,
+            color: 0x00dfd8,
+            blending: THREE.AdditiveBlending,
+            transparent: true,
+            opacity: 0.85
+        });
+        const particleSystem = new THREE.Points(pGeo, pMat);
+        scene.add(particleSystem);
+
+        function triggerSparkBurst(x, z, isCyan = true) {
+            let spawned = 0;
+            const targetColor = isCyan ? new THREE.Color(0x00dfd8) : new THREE.Color(0xffaa00);
+            pMat.color.lerp(targetColor, 0.4);
+
+            for (let i = 0; i < particleCount && spawned < 18; i++) {
+                if (pLife[i] <= 0) {
+                    pLife[i] = 1.0;
+                    pPos[i * 3] = x + (Math.random() - 0.5) * 0.4;
+                    pPos[i * 3 + 1] = 0.5;
+                    pPos[i * 3 + 2] = z + (Math.random() - 0.5) * 0.4;
+
+                    pVel[i * 3] = (Math.random() - 0.5) * 2.5;
+                    pVel[i * 3 + 1] = Math.random() * 4.5 + 2.0;
+                    pVel[i * 3 + 2] = (Math.random() - 0.5) * 2.5;
+                    spawned++;
+                }
+            }
+        }
+
+        function pressKey(midi, duration = 0.5, isRightHand = true) {
+            const data = keyMeshes.get(midi);
+            if (!data) return;
+
+            data.isPressed = true;
+            data.mesh.material = data.activeMat;
+            data.pivot.rotation.x = 0.045; // ~2.6 degrees downward pivot tilt
+            data.depressTimer = Math.max(0.12, duration - 0.02);
+
+            triggerSparkBurst(data.x, 0.8, isRightHand);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 5. CONTINUOUS MUSIC SCHEDULER (NON-STOP 24/7 PROCEDURAL STREAM)
+        // ═══════════════════════════════════════════════════════════════════════
+        const audioEngine = new PianoAudioEngine();
+        const composer = new ProceduralPianoEngine();
+        const NOTE_TRAVEL_TIME = (WATERFALL_START_Y - WATERFALL_TARGET_Y) / NOTE_SPEED;
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 6. CINEMATIC 180-DEGREE MOVEMENT CAMERA (NEVER GOES BEHIND PIANO)
+        // ═══════════════════════════════════════════════════════════════════════
+        // Smooth 180-degree frontal camera sweeping back and forth
+        // Arc: -72° (front-left) -> 0° (front-center) -> +72° (front-right) -> and back!
+        let sweepTimer = 0;
+        const SWEEP_SPEED = 0.08;      // Smooth, majestic cinema sweep
+        const MAX_SWEEP_ANGLE = 1.25;  // ~72 degrees to either side (144-degree frontal arc within 180° bounds)
+        const CAMERA_RADIUS = 29;      // Distance to frame full keyboard with margins in 9:16 vertical
+        const CAMERA_BASE_Y = 20.0;    // Elevated view showing both falling notes and keys
+
+        function updateCinematicCamera(delta) {
+            sweepTimer += delta * SWEEP_SPEED;
+
+            // Sine oscillation: oscillates between -MAX_SWEEP_ANGLE and +MAX_SWEEP_ANGLE
+            // Because theta is always in [-72°, +72°], cos(theta) is ALWAYS POSITIVE (> 0.3)
+            // This strictly guarantees the camera NEVER rotates behind the piano (180° movement only!)
+            const theta = Math.sin(sweepTimer) * MAX_SWEEP_ANGLE;
+
+            camera.position.x = Math.sin(theta) * (CAMERA_RADIUS * 0.72);
+            camera.position.z = Math.cos(theta) * CAMERA_RADIUS + 1.2;
+            camera.position.y = CAMERA_BASE_Y + Math.cos(theta * 2) * 2.5;
+
+            // Camera continuously focuses on the center of the active keyboard
+            camera.lookAt(0, -0.1, 0.8);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 7. MAIN RENDER LOOP & AUTONOMOUS STARTUP
+        // ═══════════════════════════════════════════════════════════════════════
+        let lastTime = performance.now();
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(0.1, (now - lastTime) / 1000);
+            lastTime = now;
+
+            // Continuous 24/7 Procedural Music Scheduling (Non-stop, 100% unique & copyright-free)
+            composer.update(delta, NOTE_TRAVEL_TIME, (midi, dur, hand, vel) => {
+                spawnFallingNote(midi, dur, hand, vel);
+            });
+
+            // Update 3D Waterfall Falling Notes
+            for (let i = activeNoteBars.length - 1; i >= 0; i--) {
+                const bar = activeNoteBars[i];
+                bar.progress += delta / bar.totalTravelTime;
+
+                bar.mesh.position.y = THREE.MathUtils.lerp(WATERFALL_START_Y, WATERFALL_TARGET_Y, bar.progress);
+                bar.mesh.position.z = THREE.MathUtils.lerp(WATERFALL_START_Z, WATERFALL_TARGET_Z, bar.progress);
+
+                if (bar.progress >= 1.0 && !bar.triggered) {
+                    bar.triggered = true;
+                    audioEngine.playNote(bar.midi, bar.durationSec, bar.velocity || 0.85);
+                    pressKey(bar.midi, bar.durationSec, bar.hand === 'R');
+                }
+
+                if (bar.progress >= 1.25) {
+                    noteBarGroup.remove(bar.mesh);
+                    bar.mesh.geometry.dispose();
+                    bar.mesh.material.dispose();
+                    activeNoteBars.splice(i, 1);
+                }
+            }
+
+            // Smooth physical key recovery animation
+            keyMeshes.forEach(data => {
+                if (data.isPressed) {
+                    data.depressTimer -= delta;
+                    if (data.depressTimer <= 0) {
+                        data.pivot.rotation.x = 0;
+                        data.mesh.material = data.baseMat;
+                        data.isPressed = false;
+                    }
+                }
+            });
+
+            // Update Particle Sparks
+            const posAttr = particleSystem.geometry.attributes.position;
+            for (let i = 0; i < particleCount; i++) {
+                if (pLife[i] > 0) {
+                    pLife[i] -= delta * 1.8;
+                    pPos[i * 3] += pVel[i * 3] * delta;
+                    pPos[i * 3 + 1] += pVel[i * 3 + 1] * delta;
+                    pPos[i * 3 + 2] += pVel[i * 3 + 2] * delta;
+                    pVel[i * 3 + 1] -= 9.8 * delta;
+                } else {
+                    pPos[i * 3 + 1] = -50;
+                }
+            }
+            posAttr.needsUpdate = true;
+
+            // Smooth 180-degree Cinematic Camera Glide
+            updateCinematicCamera(delta);
+
+            renderer.render(scene, camera);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 8. CONTINUOUS BOTTOM GIF / VIDEO BADGE HANDLER
+        // ═══════════════════════════════════════════════════════════════════════
+        const gifVideo = document.getElementById('gif-video');
+        const gifImg = document.getElementById('gif-img');
+
+        function initBottomGif() {
+            if (gifVideo) {
+                gifVideo.play().catch(() => { });
+                gifVideo.addEventListener('ended', () => {
+                    gifVideo.currentTime = 0;
+                    gifVideo.play().catch(() => { });
+                });
+            }
+
+            // Detect if an actual animated .gif exists in directory and swap automatically
+            const testGif = new Image();
+            testGif.onload = function () {
+                if (gifImg && gifVideo) {
+                    gifImg.src = this.src;
+                    gifImg.style.display = 'block';
+                    gifVideo.style.display = 'none';
+                }
+            };
+            testGif.src = 'mygif.gif';
+        }
+
+        initBottomGif();
+
+        // Autonomous audio unlock (handles autoplay on load & interaction)
+        function startConcert() {
+            audioEngine.unlock();
+            if (gifVideo && gifVideo.paused) {
+                gifVideo.play().catch(() => { });
+            }
+        }
+
+        ['DOMContentLoaded', 'load', 'pointerdown', 'click', 'keydown', 'touchstart'].forEach(ev => {
+            window.addEventListener(ev, startConcert, { passive: true });
         });
 
-        // Watchdog: ensures video is always playing and never frozen
+        // Continuous keep-alive to resume AudioContext immediately when browser permits
         setInterval(() => {
-            if (videoEl.paused) {
-                startPlayback();
+            if (audioEngine.ctx && audioEngine.ctx.state === 'suspended') {
+                audioEngine.ctx.resume().catch(() => { });
             }
-        }, 1500);
+        }, 800);
 
-        // Global autonomous audio unlock on any user interaction
-        ['DOMContentLoaded', 'load', 'click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(ev => {
-            window.addEventListener(ev, () => {
-                try {
-                    videoEl.muted = false;
-                    videoEl.volume = 1.0;
-                    if (videoEl.paused) videoEl.play();
-                } catch (e) { }
-            }, { passive: true });
-        });
-
-        // ═══════════════════════════════════════════════════════════════
-        // 3. VOICE ANNOUNCEMENTS (DOUBLE TAP & SUBSCRIBE)
-        // ═══════════════════════════════════════════════════════════════
-        const ANNOUNCEMENTS = [
-            { id: 'cta_1', text: "Double tap on the screen right now, and subscribe to the channel for more non-stop streams!" },
-            { id: 'cta_2', text: "If you're enjoying the stream, double tap your screen and hit that subscribe button!" },
-            { id: 'cta_3', text: "Don't forget to double tap the screen to support us, and subscribe so you never miss another stream!" },
-            { id: 'cta_4', text: "Double tap the screen to show some love, and subscribe to the channel right now!" },
-            { id: 'cta_5', text: "Double tap that screen right now, and make sure to subscribe to the channel!" }
-        ];
-
-        let ctaIndex = 0;
-        let voiceCache = {};
-        let currentAudio = null;
-
-        function triggerVoiceAnnouncement() {
-            const item = ANNOUNCEMENTS[ctaIndex % ANNOUNCEMENTS.length];
-            ctaIndex++;
-
-            // Highlight the on-screen banner
-            highlightBanner(item.text);
-
-            // Spawn celebratory reaction hearts
-            spawnReactionBurst();
-
-            // Play high-definition neural voice audio clip with SpeechSynthesis fallback
-            playVoice(item.id, item.text);
+        // Window resize keeps exact 9:16 vertical ratio
+        function onResize() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
         }
+        window.addEventListener('resize', onResize);
 
-        function playVoice(clipId, fallbackText) {
-            try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { }
-            if (currentAudio) {
-                try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) { }
-            }
-
-            try {
-                let snd = voiceCache[clipId];
-                if (!snd) {
-                    snd = new Audio(`audio/${clipId}.mp3`);
-                    voiceCache[clipId] = snd;
-                }
-                snd.currentTime = 0;
-                snd.volume = 1.0;
-                currentAudio = snd;
-                const p = snd.play();
-                if (p !== undefined) {
-                    p.catch(() => {
-                        fallbackSpeech(fallbackText);
-                    });
-                    return;
-                }
-            } catch (e) { }
-
-            fallbackSpeech(fallbackText);
-        }
-
-        function fallbackSpeech(words) {
-            if (!('speechSynthesis' in window)) return;
-            try {
-                speechSynthesis.cancel();
-                const msg = new SpeechSynthesisUtterance(words);
-                msg.lang = 'en-US';
-                msg.rate = 0.95;
-                msg.pitch = 1.0;
-                msg.volume = 1.0;
-
-                const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
-                if (voices && voices.length) {
-                    msg.voice = voices.find(v => /natural|neural|online|google\s+us|microsoft\s+guy|microsoft\s+david|samantha/i.test(v.name))
-                        || voices.find(v => /^en[-_]us/i.test(v.lang))
-                        || voices[0];
-                }
-                speechSynthesis.speak(msg);
-            } catch (e) { }
-        }
-
-        // Start periodic voice announcements
-        setTimeout(() => {
-            triggerVoiceAnnouncement();
-            setInterval(triggerVoiceAnnouncement, ANNOUNCE_INTERVAL * 1000);
-        }, 10000); // First announcement after 10 seconds
-
-        // ═══════════════════════════════════════════════════════════════
-        // 4. ANIMATED OVERLAYS & ENGAGEMENT BURSTS
-        // ═══════════════════════════════════════════════════════════════
-        const bannerCard = document.getElementById('bannerCard');
-        const reactionBox = document.getElementById('reactionBox');
-
-        function highlightBanner() {
-            if (!bannerCard) return;
-            bannerCard.classList.add('highlight');
-            setTimeout(() => {
-                bannerCard.classList.remove('highlight');
-            }, 6000);
-        }
-
-        const EMOJIS = ['❤️', '💖', '🔥', '👍', '❤️', '❤️'];
-        function spawnReaction() {
-            if (!reactionBox) return;
-            const el = document.createElement('div');
-            el.className = 'floating-heart';
-            el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-            el.style.left = `${Math.floor(Math.random() * 50)}px`;
-            el.style.fontSize = `${Math.floor(Math.random() * 14 + 22)}px`;
-            reactionBox.appendChild(el);
-            setTimeout(() => el.remove(), 1500);
-        }
-
-        function spawnReactionBurst() {
-            for (let i = 0; i < 6; i++) {
-                setTimeout(spawnReaction, i * 220);
-            }
-        }
-
-        // Ambient reactions floating up periodically
-        setInterval(() => {
-            if (Math.random() > 0.4) spawnReaction();
-        }, 4000);
+        // Start non-stop concert
+        startConcert();
+        requestAnimationFrame(animate);
     </script>
 </body>
 
