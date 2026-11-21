@@ -627,9 +627,11 @@
         // High-Performance 60 FPS WebGL Renderer (Optimized for Zero-Lag Streaming)
         const renderer = new THREE.WebGLRenderer({
             canvas,
-            antialias: false, // Disabled for 3x rendering speedup; 1080x1920 is already razor-sharp
+            antialias: false,
+            alpha: false,
             powerPreference: 'high-performance',
-            precision: 'mediump'
+            precision: 'mediump',
+            failIfMajorPerformanceCaveat: false // Guarantees WebGL initializes cleanly on headless SwiftShader
         });
 
         renderer.setSize(container.clientWidth, container.clientHeight);
