@@ -20,49 +20,65 @@ jobs:
       - name: Install FFmpeg, Xvfb, PulseAudio, Chromium
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils unclutter
+          sudo apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils unclutter curl
           if ! which google-chrome &>/dev/null && ! which chromium-browser &>/dev/null && ! which chromium &>/dev/null; then
             sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium || true
           fi
 
-      # ── Start Local Web Server for 3D Piano ──────────────────────────
-      - name: Start Local HTTP Server
+      # ── Broadcast 24/7 3D Piano Live Stream to YouTube Shorts ─────────
+      - name: Run 5-Hour Live Broadcast
+        env:
+          KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
         run: |
-          python3 server.py &
-          sleep 2
+          STREAM_KEY=$(echo "$KEY" | tr -d '[:space:]')
+          if [ -z "$STREAM_KEY" ]; then
+            echo "=========================================================================="
+            echo "::error:: STREAM_KEY secret is missing!"
+            echo "Please go to: Repository -> Settings -> Secrets and variables -> Actions"
+            echo "Create a repository secret named: STREAM_KEY with your YouTube stream key."
+            echo "=========================================================================="
+            exit 1
+          fi
 
-      # ── Start PulseAudio Virtual Sink (captures synthesizer audio) ────
-      - name: Start PulseAudio with virtual sink
-        run: |
+          echo "══════════════════════════════════════════════════════════════════════════"
+          echo "  STARTING YOUTUBE LIVE SHORTS 9:16 BROADCAST (6800 KBPS ZERO-LAG CBR)    "
+          echo "══════════════════════════════════════════════════════════════════════════"
+
+          # 1. Start PulseAudio Virtual Sink for audio capture
           export XDG_RUNTIME_DIR=/tmp/pulse-runtime
           mkdir -p "$XDG_RUNTIME_DIR"
           chmod 700 "$XDG_RUNTIME_DIR"
           pulseaudio --daemonize=no --exit-idle-time=-1 \
             --load="module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulseaudio.socket" \
-            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" &
+            --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualSpeaker" > /tmp/pulse.log 2>&1 &
           sleep 2
           pactl --server=unix:/tmp/pulseaudio.socket set-default-sink virtual_out
-          echo "PULSE_SERVER=unix:/tmp/pulseaudio.socket" >> $GITHUB_ENV
-          echo "XDG_RUNTIME_DIR=/tmp/pulse-runtime" >> $GITHUB_ENV
+          export PULSE_SERVER=unix:/tmp/pulseaudio.socket
+          echo "[✓] PulseAudio virtual audio sink ready."
 
-      # ── Xvfb Virtual Screen (1080×1920 9:16 Vertical Shorts Format) ───
-      - name: Start Xvfb 1080x1920 vertical screen
-        run: |
-          Xvfb :99 -screen 0 1080x1920x24 -ac +extension GLX +render -noreset &
+          # 2. Start Local HTTP Server with health check
+          python3 server.py > /tmp/server.log 2>&1 &
           sleep 2
-          DISPLAY=:99 unclutter -idle 0 -root &
+          curl -s -I http://127.0.0.1:8080/index.html | head -n 1
+          echo "[✓] Local HTTP server responding on port 8080."
 
-      # ── Launch Chromium with 3D WebGL Piano & Autoplay ───────────────
-      - name: Launch 3D Piano in Kiosk Mode
-        run: |
+          # 3. Start Xvfb Virtual Screen (1080x1920 9:16 Shorts)
+          Xvfb :99 -screen 0 1080x1920x24 -ac +extension GLX +render -noreset > /tmp/xvfb.log 2>&1 &
+          sleep 2
+          export DISPLAY=:99
+          unclutter -idle 0 -root &
+          echo "[✓] Xvfb 1080x1920 virtual screen active."
+
+          # 4. Launch Chromium with WebGL SwiftShader & Autoplay
           BROWSER=$(which google-chrome-stable || which google-chrome || which chromium-browser || which chromium)
-          echo "Launching browser: $BROWSER"
+          echo "[✓] Launching browser: $BROWSER"
 
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
           $BROWSER \
             --no-sandbox \
             --disable-dev-shm-usage \
-            --in-process-gpu \
+            --enable-webgl \
+            --ignore-gpu-blocklist \
             --use-gl=angle \
             --use-angle=swiftshader \
             --enable-gpu-rasterization \
@@ -87,25 +103,11 @@ jobs:
             --disable-renderer-backgrounding \
             --disable-backgrounding-occluded-windows \
             --disk-cache-dir=/tmp/chromium-cache \
-            "http://127.0.0.1:8080/index.html" &
+            "http://127.0.0.1:8080/index.html" > /tmp/chrome.log 2>&1 &
           sleep 6
 
-      # ── Stream to YouTube Live (YouTube Certified 1080p 30fps Zero-Lag) ─
-      - name: Stream 5 hours to YouTube
-        env:
-          KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
-        run: |
-          STREAM_KEY=$(echo "$KEY" | tr -d '[:space:]')
-          if [ -z "$STREAM_KEY" ]; then
-            echo "=========================================================================="
-            echo "::error:: STREAM_KEY secret is missing!"
-            echo "Please go to: Repository -> Settings -> Secrets and variables -> Actions"
-            echo "Create a repository secret named: STREAM_KEY with your YouTube stream key."
-            echo "=========================================================================="
-            exit 1
-          fi
-
-          echo "Broadcasting 3D Piano Live Stream to YouTube Shorts in 1080x1920..."
+          # 5. Broadcast to YouTube Live with Strict 6800 Kbps CBR
+          echo "Broadcasting 3D Piano to YouTube Shorts at strict 6800 Kbps CBR..."
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
           timeout 18000 ffmpeg -nostdin \
             -thread_queue_size 2048 -f x11grab -draw_mouse 0 \
@@ -113,9 +115,10 @@ jobs:
             -thread_queue_size 2048 -f pulse -i virtual_out.monitor \
             -c:v libx264 -preset ultrafast -tune zerolatency \
               -profile:v high -level:v 4.1 \
-              -b:v 4500k -minrate 4000k -maxrate 5000k -bufsize 9000k \
+              -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 13600k \
+              -x264-params "nal-hrd=cbr:force-cfr=1" \
               -pix_fmt yuv420p -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 160k -ar 44100 -ac 2 \
+            -c:a aac -b:a 192k -ar 44100 -ac 2 \
             -threads 0 \
             -flvflags no_duration_filesize \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
@@ -124,6 +127,10 @@ jobs:
           if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 0 ]; then
             echo "Stream segment completed successfully."
           else
-            echo "FFmpeg exited with code $EXIT_CODE"
+            echo "::error:: FFmpeg stream exited with code $EXIT_CODE"
+            echo "=== CHROME LOG ==="
+            cat /tmp/chrome.log || true
+            echo "=== SERVER LOG ==="
+            cat /tmp/server.log || true
             exit $EXIT_CODE
           fi
