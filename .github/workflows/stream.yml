@@ -48,7 +48,7 @@ jobs:
       # ── Xvfb Virtual Screen (1080×1920 9:16 Vertical Shorts Format) ───
       - name: Start Xvfb 1080x1920 vertical screen
         run: |
-          Xvfb :99 -screen 0 1080x1920x24 &
+          Xvfb :99 -screen 0 1080x1920x24 -ac +extension GLX +render -noreset &
           sleep 2
           DISPLAY=:99 unclutter -idle 0 -root &
 
@@ -62,6 +62,7 @@ jobs:
           $BROWSER \
             --no-sandbox \
             --disable-dev-shm-usage \
+            --in-process-gpu \
             --use-gl=angle \
             --use-angle=swiftshader \
             --enable-gpu-rasterization \
@@ -72,19 +73,24 @@ jobs:
             --window-size=1080,1920 \
             --window-position=0,0 \
             --autoplay-policy=no-user-gesture-required \
-            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints \
+            --disable-features=AutoplayIgnoreWebAudio,Translate,OptimizationHints,MediaEngagementBypassAutoplayPolicies \
             --enable-audio-focus-enforcement=false \
             --no-first-run \
             --disable-translate \
             --disable-infobars \
             --disable-notifications \
+            --disable-extensions \
+            --disable-sync \
+            --disable-breakpad \
+            --disable-background-networking \
             --disable-background-timer-throttling \
             --disable-renderer-backgrounding \
             --disable-backgrounding-occluded-windows \
+            --disk-cache-dir=/tmp/chromium-cache \
             "http://127.0.0.1:8080/index.html" &
           sleep 6
 
-      # ── Stream to YouTube Live (1080x1920 6800 Kbps Zero-Lag) ─────────
+      # ── Stream to YouTube Live (YouTube Certified 1080p 30fps Zero-Lag) ─
       - name: Stream 5 hours to YouTube
         env:
           KEY: ${{ secrets.STREAM_KEY || secrets.YOUTUBE_STREAM_KEY || secrets.YOUTUBE_KEY || secrets.LIVE_KEY }}
@@ -102,14 +108,15 @@ jobs:
           echo "Broadcasting 3D Piano Live Stream to YouTube Shorts in 1080x1920..."
           DISPLAY=:99 PULSE_SERVER=unix:/tmp/pulseaudio.socket \
           timeout 18000 ffmpeg -nostdin \
-            -thread_queue_size 1024 -f x11grab -draw_mouse 0 \
+            -thread_queue_size 2048 -f x11grab -draw_mouse 0 \
             -video_size 1080x1920 -framerate 30 -i :99.0 \
-            -thread_queue_size 1024 -f pulse -i virtual_out.monitor \
-            -c:v libx264 -preset ultrafast \
-              -b:v 6800k -minrate 6500k -maxrate 7000k -bufsize 14000k \
-              -pix_fmt yuv420p -g 60 -keyint_min 60 -sc_threshold 0 \
-            -c:a aac -b:a 192k -ar 44100 -ac 2 \
-            -threads 2 \
+            -thread_queue_size 2048 -f pulse -i virtual_out.monitor \
+            -c:v libx264 -preset ultrafast -tune zerolatency \
+              -profile:v high -level:v 4.1 \
+              -b:v 4500k -minrate 4000k -maxrate 5000k -bufsize 9000k \
+              -pix_fmt yuv420p -r 30 -g 60 -keyint_min 60 -sc_threshold 0 \
+            -c:a aac -b:a 160k -ar 44100 -ac 2 \
+            -threads 0 \
             -flvflags no_duration_filesize \
             -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
 
